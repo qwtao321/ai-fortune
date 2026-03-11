@@ -156,18 +156,18 @@ tcb fn deploy fortune --env 你的环境ID
 
 ### 6.2 打开网页设置
 
-1. 用浏览器打开 `index.html`（或部署到 TCB 静态托管后访问）
-2. 点击右下角 **⚙** 按钮
-3. 填入 **环境 ID** 和你在数据库里创建的 **API Key**（如 `TEST-KEY-0001`）
-4. 点击**保存设置**
+1. 用浏览器访问已部署的 Vercel 站点地址
+2. 点击右下角 **🔑** 按钮
+3. 输入在数据库里生成的密钥（如 `FM-XXXXXXXXXXXX`）
+4. 点击**确认使用**
 
-### 6.3 部署到 TCB 静态托管（可选）
+### 6.3 部署到 Vercel（推荐）
 
 ```bash
-tcb hosting deploy index.html -e 你的环境ID
+npx vercel --prod --yes
 ```
 
-访问地址：`https://你的环境ID.tcloudbaseapp.com/index.html`
+访问地址：`https://<your-project>.vercel.app`
 
 ---
 

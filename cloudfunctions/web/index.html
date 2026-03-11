@@ -726,9 +726,8 @@
 /* ─────────────────────────────────────────────────────────────────
    ★ 开发者配置区（部署前填写，用户不可见）
    ───────────────────────────────────────────────────────────────── */
-// 第一步：在 TCB 控制台 → 云函数 → fortune → 触发管理 → 新增触发器（HTTP触发器）
-// 第二步：把生成的触发器 URL 填到下面（格式如 https://xxxx.service.tcloudbase.com/fortune）
-const FORTUNE_HTTP_URL = 'https://oscar-test-1g5f50fp438242fe-1321886051.ap-shanghai.app.tcloudbase.com/fortune'; // ← 替换为 HTTP 触发器地址
+// Vercel 同域后端接口（前后端统一部署）
+const FORTUNE_HTTP_URL = '/api/fortune';
 const BUY_KEY_URL      = 'https://c.fakamiao.top/itemDetail/13732?shopId=aWNX4H'; // 发卡喵商品购买页
 
 /* ─────────────────────────────────────────────────────────────────
