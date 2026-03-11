@@ -1,0 +1,9 @@
+{
+  "name": "admin_keys",
+  "version": "1.0.0",
+  "description": "管理员云函数：批量生成/管理用户密钥",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.7.3"
+  }
+}

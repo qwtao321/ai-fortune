@@ -1,0 +1,40 @@
+{
+  "envId": "oscar-test-1g5f50fp438242fe",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "fortune",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "timeout": 30
+    },
+    {
+      "name": "admin_keys",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "timeout": 15
+    },
+    {
+      "name": "web",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "timeout": 5
+    }
+  ],
+  "hosting": {
+    "uploadFiles": [
+      {
+        "localPath": "./index.html",
+        "cloudPath": "/index.html"
+      },
+      {
+        "localPath": "./guaDict.js",
+        "cloudPath": "/guaDict.js"
+      },
+      {
+        "localPath": "./fiveElementsLogic.js",
+        "cloudPath": "/fiveElementsLogic.js"
+      }
+    ]
+  }
+}

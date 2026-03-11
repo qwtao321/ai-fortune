@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>紫微命盘 · AI 算命</title>
+
+  <!-- ① Tailwind CSS v3 Play CDN（多源容错） -->
+  <script src="https://cdn.tailwindcss.com"
+          onerror="this.src='https://unpkg.com/tailwindcss@3/src/index.js'"></script>
+  <script>
+    if (typeof tailwind !== 'undefined') {
+      tailwind.config = {
+        theme: { extend: { colors: { gold: '#f5c518' } } },
+      };
+    }
+  </script>
+
+  <!--
+  ② lunar-javascript
+     提供 Solar / Lunar / EightChar 等全局类
+     Solar.fromYmdHms(y,m,d,h,0,0) → .getLunar() → .getEightChar()
+     EightChar 方法：getYearGan/Zhi / getMonthGan/Zhi / getDayGan/Zhi / getTimeGan/Zhi
+                     getYearNaYin / getMonthNaYin / getDayNaYin / getTimeNaYin
+                     getYearWuXing / getMonthWuXing / getDayWuXing / getTimeWuXing
+  -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/lunar-javascript/1.6.12/lunar.min.js"
+          onerror="this.src='https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.js'"></script>
+
+  <!-- ③ html2canvas v1.4：result-card 截图导出 PNG -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          onerror="this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'"></script>
+  <script src="./guaDict.js"></script>
+  <script src="./fiveElementsLogic.js"></script>
+
+  <!-- TCB JS SDK 已移除：改用 HTTP 触发器 + fetch，零 CDN 依赖 -->
+
+  <style>
+    /* ─────────────────────────────────────────────────────────
+       CSS 变量 & Reset
+       ───────────────────────────────────────────────────────── */
+    :root {
+      --gold:    #f5c518;
+      --bg:      #0d0d1a;
+      --purple:  #7c3aed;
+      --indigo:  #4f46e5;
+      --card-bg: rgba(255,255,255,0.04);
+      --card-bd: rgba(255,255,255,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 15% 10%,  rgba(124,58,237,0.20) 0%, transparent 52%),
+        radial-gradient(ellipse at 85% 85%,  rgba(79,70,229,0.18)  0%, transparent 52%),
+        radial-gradient(ellipse at 50% 50%,  rgba(99,102,241,0.06) 0%, transparent 70%);
+      min-height: 100vh;
+      font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','STSong',sans-serif;
+      color: #e2e2f0;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       毛玻璃卡片
+       ───────────────────────────────────────────────────────── */
+    .glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-bd);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       标题金色光晕
+       ───────────────────────────────────────────────────────── */
+    .title-glow {
+      color: var(--gold);
+      text-shadow: 0 0 28px rgba(245,197,24,.75), 0 0 55px rgba(245,197,24,.35);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       输入控件
+       ───────────────────────────────────────────────────────── */
+    .inp {
+      background: rgba(124,58,237,.08);
+      border: 1px solid rgba(124,58,237,.28);
+      color: #e2e2f0;
+      transition: border-color .25s, box-shadow .25s, background .25s;
+    }
+    .inp:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245,197,24,.14);
+      background: rgba(124,58,237,.13);
+    }
+    .inp option { background: #1a1a2e; color: #e2e2f0; }
+
+    /* select 下拉箭头 */
+    select.inp {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239ca3af' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      padding-right: 32px;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       主按钮
+       ───────────────────────────────────────────────────────── */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
+      border: 1px solid rgba(245,197,24,.35);
+      box-shadow: 0 0 26px rgba(124,58,237,.4), inset 0 1px 0 rgba(255,255,255,.07);
+      transition: transform .25s, box-shadow .25s;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 32px rgba(124,58,237,.6);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ─────────────────────────────────────────────────────────
+       CSS 动画
+       ───────────────────────────────────────────────────────── */
+    @keyframes rotateCW  { to { transform: rotate(360deg);  } }
+    @keyframes rotateCCW { to { transform: rotate(-360deg); } }
+    @keyframes pulseFade {
+      0%,100% { opacity: .55; }
+      50%      { opacity: 1;   }
+    }
+    @keyframes floatY {
+      0%,100% { transform: translateY(0);   }
+      50%      { transform: translateY(-7px); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+    @keyframes twinkle {
+      0%,100% { opacity: 0;   transform: scale(.4); }
+      50%      { opacity: .85; transform: scale(1);  }
+    }
+    @keyframes scanLine {
+      0%   { top: 0; opacity: .6; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    .spin-cw  { animation: rotateCW  8s linear infinite; }
+    .spin-ccw { animation: rotateCCW 5s linear infinite; }
+    .pulse-op { animation: pulseFade 2.4s ease-in-out infinite; }
+    .float-y  { animation: floatY 3.2s ease-in-out infinite; }
+    .fade-up  { animation: fadeInUp .55s ease-out both; }
+
+    /* ─────────────────────────────────────────────────────────
+       加载遮罩
+       ───────────────────────────────────────────────────────── */
+    #loading-overlay {
+      background: rgba(13,13,26,.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       模态框遮罩
+       ───────────────────────────────────────────────────────── */
+    .modal-bg {
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       历史记录条目
+       ───────────────────────────────────────────────────────── */
+    .hist-item {
+      border-left: 3px solid rgba(245,197,24,.3);
+      transition: border-color .25s, background .25s;
+    }
+    .hist-item:hover {
+      border-left-color: var(--gold);
+      background: rgba(124,58,237,.09) !important;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       结果文字
+       ───────────────────────────────────────────────────────── */
+    #result-text {
+      line-height: 2.25;
+      letter-spacing: .045em;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       滚动条
+       ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(124,58,237,.4); border-radius: 2px; }
+
+    /* ─────────────────────────────────────────────────────────
+       星星
+       ───────────────────────────────────────────────────────── */
+    .star {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      background: #fff;
+      animation: twinkle var(--dur) ease-in-out var(--delay) infinite;
+    }
+
+  /* line-clamp polyfill */
+  .clamp2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 历史记录展开动画 */
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hist-open { animation: slideDown .25s ease-out; }
+
+  /* 模式切换 */
+  .mode-tab {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #9ca3af;
+  }
+  .mode-tab.active {
+    background: linear-gradient(135deg, var(--purple), var(--indigo));
+    border-color: rgba(245,197,24,.35);
+    color: var(--gold);
+    box-shadow: 0 0 18px rgba(124,58,237,.35);
+  }
+
+  /* 梅花易数能量按钮 */
+  @keyframes energyPulse {
+    0% { transform: scale(.95); opacity: .6; }
+    70% { transform: scale(1.25); opacity: 0; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+  .energy-wrap { position: relative; }
+  .energy-ripple {
+    position: absolute;
+    inset: -10px;
+    border-radius: 18px;
+    border: 1px solid rgba(245,197,24,.5);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .energy-wrap.charging .energy-ripple {
+    animation: energyPulse 1.2s ease-out infinite;
+  }
+  .energy-wrap.charging .energy-ripple.r2 { animation-delay: .4s; }
+  .energy-wrap.charging .energy-ripple.r3 { animation-delay: .8s; }
+
+  /* 六爻绘制 */
+  .hex-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .hex-box {
+    background: rgba(124,58,237,.07);
+    border: 1px solid rgba(124,58,237,.2);
+    border-radius: 12px;
+    padding: 10px 8px;
+  }
+  .yao-stack { display: flex; flex-direction: column-reverse; gap: 6px; }
+  .yao-line { height: 10px; display: flex; align-items: center; justify-content: center; }
+  .yao-yang {
+    width: 70%;
+    height: 2px;
+    background: rgba(226,226,240,.92);
+    border-radius: 2px;
+  }
+  .yao-yin {
+    width: 70%;
+    display: flex;
+    justify-content: space-between;
+  }
+  .yao-yin::before,
+  .yao-yin::after {
+    content: "";
+    width: 42%;
+    height: 2px;
+    background: rgba(226,226,240,.92);
+    border-radius: 2px;
+  }
+  @keyframes movingFlash {
+    0%,100% { filter: drop-shadow(0 0 2px rgba(245,197,24,.35)); opacity: .8; }
+    50% { filter: drop-shadow(0 0 8px rgba(245,197,24,.95)); opacity: 1; }
+  }
+  .yao-moving .yao-yang,
+  .yao-moving .yao-yin::before,
+  .yao-moving .yao-yin::after {
+    background: var(--gold);
+    animation: movingFlash 1s ease-in-out infinite;
+  }
+
+  .outer-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    background: rgba(79,70,229,.18);
+    border: 1px solid rgba(79,70,229,.35);
+    color: #c4b5fd;
+  }
+  </style>
+</head>
+
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     星空背景（JS 动态生成，纯装饰）
+     ══════════════════════════════════════════════════════════════ -->
+<div id="stars" aria-hidden="true"></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     全屏加载遮罩 · 仪式感推演动画
+     ══════════════════════════════════════════════════════════════ -->
+<div id="loading-overlay"
+     class="fixed inset-0 z-50 hidden items-center justify-center select-none">
+  <div class="text-center">
+
+    <!-- 三层同心旋转环 -->
+    <div class="relative w-44 h-44 mx-auto mb-8">
+
+      <!-- 外环：顺时针 -->
+      <div class="spin-cw absolute inset-0 rounded-full"
+           style="border:2px solid transparent;
+                  border-top-color:var(--gold);
+                  border-right-color:rgba(245,197,24,.5);
+                  border-bottom-color:rgba(124,58,237,.3);
+                  border-left-color:rgba(124,58,237,.1);"></div>
+
+      <!-- 中环：逆时针 -->
+      <div class="spin-ccw absolute inset-5 rounded-full"
+           style="border:2px solid transparent;
+                  border-bottom-color:var(--gold);
+                  border-left-color:rgba(245,197,24,.5);
+                  border-top-color:rgba(79,70,229,.3);
+                  border-right-color:rgba(79,70,229,.1);"></div>
+
+      <!-- 内圆：太极 + 脉冲 -->
+      <div class="pulse-op absolute inset-10 rounded-full flex items-center justify-center"
+           style="background:radial-gradient(circle, rgba(124,58,237,.38), rgba(13,13,26,.9));
+                  border:1px solid rgba(245,197,24,.55);">
+        <span class="float-y text-3xl"
+              style="filter:drop-shadow(0 0 10px var(--gold));">☯</span>
+      </div>
+
+      <!-- 八卦方位符文 -->
+      <span class="absolute text-xs"
+            style="color:var(--gold);top:-6px;left:50%;transform:translateX(-50%);">☰</span>
+      <span class="absolute text-xs"
+            style="color:var(--gold);bottom:-6px;left:50%;transform:translateX(-50%);">☷</span>
+      <span class="absolute text-xs"
+            style="color:var(--gold);left:-6px;top:50%;transform:translateY(-50%);">☵</span>
+      <span class="absolute text-xs"
+            style="color:var(--gold);right:-6px;top:50%;transform:translateY(-50%);">☲</span>
+    </div>
+
+    <p class="text-xl tracking-[.35em] font-light" style="color:var(--gold);">推 演 中</p>
+    <p class="text-sm mt-2" style="color:rgba(196,181,253,.6);">天机运转，稍候片刻</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     设置模态框
+     ══════════════════════════════════════════════════════════════ -->
+<div id="settings-modal"
+     class="modal-bg fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="glass rounded-2xl p-7 w-full max-w-md fade-up">
+
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-semibold" style="color:var(--gold);">🔑 输入使用密钥</h3>
+      <button onclick="closeSettings()"
+              class="w-8 h-8 flex items-center justify-center rounded-full
+                     text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="关闭">✕</button>
+    </div>
+
+    <!-- 购买入口 -->
+    <div class="rounded-xl p-4 mb-5 text-sm"
+         style="background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.2);">
+      <p class="font-medium mb-1" style="color:var(--gold);">还没有密钥？</p>
+      <p class="text-xs leading-relaxed" style="color:rgba(196,181,253,.8);">
+        前往发卡平台购买，每张密钥包含固定积分，用完后可再次购买新密钥。
+      </p>
+      <a id="link-buy" href="#" target="_blank"
+         class="inline-block mt-2 px-4 py-1.5 rounded-lg text-xs font-medium transition-all"
+         style="background:linear-gradient(135deg,var(--purple),var(--indigo));
+                color:var(--gold);border:1px solid rgba(245,197,24,.3);">
+        🛒 立即购买密钥 →
+      </a>
+    </div>
+
+    <!-- 密钥输入 -->
+    <div>
+      <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.9);">
+        使用密钥（购买后获得）
+      </label>
+      <div class="relative">
+        <input id="inp-key" type="password" placeholder="粘贴您的密钥，例：FM-XXXXXXXXXXXXXXXX"
+               class="inp w-full rounded-xl px-4 py-3 text-sm pr-11" />
+        <button onclick="toggleKeyVis()"
+                class="absolute right-3 top-1/2 -translate-y-1/2
+                       text-gray-400 hover:text-gray-200 transition-colors text-base"
+                title="显示/隐藏">👁</button>
+      </div>
+      <!-- 积分余量展示（校验成功后显示） -->
+      <div id="key-credits-row" class="hidden flex items-center justify-between mt-2 px-1">
+        <span class="text-xs" style="color:rgba(156,163,175,.7);">剩余积分</span>
+        <span id="key-credits-val" class="text-sm font-semibold" style="color:var(--gold);">--</span>
+      </div>
+      <p class="text-xs mt-1.5" style="color:rgba(156,163,175,.6);">
+        每次推演消耗 1 积分，积分归零后请购买新密钥
+      </p>
+    </div>
+
+    <div class="flex gap-3 mt-6">
+      <button onclick="saveSettings()"
+              class="btn-primary flex-1 py-3 rounded-xl text-sm font-semibold text-white">
+        ✓ 确认使用
+      </button>
+      <button onclick="closeSettings()"
+              class="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-400
+                     hover:text-white transition-colors"
+              style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);">
+        取消
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     主体内容
+     ══════════════════════════════════════════════════════════════ -->
+<div class="max-w-xl mx-auto px-4 py-10 relative">
+
+  <!-- ────── Hero 标题 ────── -->
+  <header class="text-center mb-10 select-none">
+    <div class="text-3xl tracking-widest mb-3"
+         style="filter:drop-shadow(0 0 10px rgba(245,197,24,.55));">
+      ☰ ☵ ☶ ☷
+    </div>
+    <h1 class="title-glow text-5xl font-bold tracking-[.18em]">紫微命盘</h1>
+    <p class="text-sm tracking-[.25em] mt-2" style="color:rgba(196,181,253,.72);">
+      AI · 八字 · 命理推演
+    </p>
+    <div class="mt-5 flex items-center justify-center gap-3">
+      <div class="h-px flex-1 max-w-[88px]"
+           style="background:linear-gradient(to right,transparent,rgba(245,197,24,.5));"></div>
+      <span class="text-xs" style="color:rgba(156,163,175,.5);">天机不可泄露，命运却可参悟</span>
+      <div class="h-px flex-1 max-w-[88px]"
+           style="background:linear-gradient(to left,transparent,rgba(245,197,24,.5));"></div>
+    </div>
+  </header>
+
+  <!-- ────── 模式切换 ────── -->
+  <div class="glass rounded-2xl p-2 mb-5">
+    <div class="grid grid-cols-2 gap-2">
+      <button id="tab-bazi" class="mode-tab active rounded-xl py-2.5 text-sm font-semibold"
+              onclick="setMode('bazi')">八字命理</button>
+      <button id="tab-meihua" class="mode-tab rounded-xl py-2.5 text-sm font-semibold"
+              onclick="setMode('meihua')">梅花易数</button>
+    </div>
+  </div>
+
+  <!-- ────── 输入卡片 ────── -->
+  <section id="bazi-section" class="glass rounded-2xl p-6 mb-5">
+    <h2 class="flex items-center gap-2 text-base font-semibold text-white mb-5">
+      <span style="color:var(--gold);">✦</span> 录入生辰八字
+    </h2>
+
+    <!-- 姓名 & 性别 -->
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">姓名</label>
+        <input id="inp-name" type="text" placeholder="请输入姓名"
+               class="inp w-full rounded-xl px-4 py-3 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">性别</label>
+        <div class="grid grid-cols-2 gap-2 h-[46px]">
+          <!-- 默认男性激活 -->
+          <button id="btn-male" onclick="setGender('male')"
+                  class="rounded-xl text-sm font-medium text-white transition-all"
+                  style="background:linear-gradient(135deg,var(--purple),var(--indigo));
+                         border:1px solid rgba(245,197,24,.35);">♂ 男</button>
+          <button id="btn-female" onclick="setGender('female')"
+                  class="rounded-xl text-sm font-medium text-gray-400 transition-all"
+                  style="background:rgba(255,255,255,.03);
+                         border:1px solid rgba(255,255,255,.1);">♀ 女</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 历法切换 -->
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-xs" style="color:rgba(196,181,253,.85);">历法：</span>
+      <div class="flex rounded-lg overflow-hidden"
+           style="border:1px solid rgba(124,58,237,.3);">
+        <button id="cal-solar" onclick="setCalendar('solar')"
+                class="px-5 py-2 text-xs font-medium transition-all"
+                style="background:linear-gradient(135deg,var(--purple),var(--indigo));
+                       color:var(--gold);">公历</button>
+        <button id="cal-lunar" onclick="setCalendar('lunar')"
+                class="px-5 py-2 text-xs font-medium transition-all text-gray-400"
+                style="background:transparent;">农历</button>
+      </div>
+      <span id="cal-hint" class="text-xs" style="color:rgba(156,163,175,.6);">阳历</span>
+    </div>
+
+    <!-- 年 月 日 -->
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">年</label>
+        <select id="sel-year" onchange="updateDays()"
+                class="inp w-full rounded-xl px-3 py-3 text-sm"></select>
+      </div>
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">月</label>
+        <select id="sel-month" onchange="updateDays()"
+                class="inp w-full rounded-xl px-3 py-3 text-sm"></select>
+      </div>
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">日</label>
+        <select id="sel-day" class="inp w-full rounded-xl px-3 py-3 text-sm"></select>
+      </div>
+    </div>
+
+    <!-- 出生时辰（传统十二时辰） -->
+    <div>
+      <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">
+        出生时辰
+      </label>
+      <select id="sel-hour" class="inp w-full rounded-xl px-4 py-3 text-sm">
+        <option value="0" >子时 23:00–01:00（鼠）</option>
+        <option value="1" >丑时 01:00–03:00（牛）</option>
+        <option value="3" >寅时 03:00–05:00（虎）</option>
+        <option value="5" >卯时 05:00–07:00（兔）</option>
+        <option value="7" >辰时 07:00–09:00（龙）</option>
+        <option value="9" >巳时 09:00–11:00（蛇）</option>
+        <option value="11">午时 11:00–13:00（马）</option>
+        <option value="13">未时 13:00–15:00（羊）</option>
+        <option value="15">申时 15:00–17:00（猴）</option>
+        <option value="17">酉时 17:00–19:00（鸡）</option>
+        <option value="19">戌时 19:00–21:00（狗）</option>
+        <option value="21">亥时 21:00–23:00（猪）</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- ────── 梅花易数输入卡片 ────── -->
+  <section id="meihua-section" class="glass rounded-2xl p-6 mb-5 hidden">
+    <h2 class="flex items-center gap-2 text-base font-semibold text-white mb-5">
+      <span style="color:var(--gold);">✦</span> 梅花易数 · 数字起卦
+    </h2>
+    <div class="mb-4">
+      <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.85);">所求之事</label>
+      <input id="inp-question" type="text" class="inp w-full rounded-xl px-4 py-3 text-sm"
+             placeholder="心中默念你所求之事（如：明天的面试能过吗？）" />
+    </div>
+    <div class="mb-4">
+      <label class="block text-xs mb-2" style="color:rgba(196,181,253,.85);">注入当前能量起卦（长按 3 秒）</label>
+      <div id="energy-wrap" class="energy-wrap">
+        <div class="energy-ripple r1"></div>
+        <div class="energy-ripple r2"></div>
+        <div class="energy-ripple r3"></div>
+        <button id="btn-energy" type="button"
+                class="btn-primary w-full py-3.5 rounded-xl text-sm font-semibold text-white select-none">
+          按住注入能量（3.0s）
+        </button>
+      </div>
+      <p id="energy-tip" class="text-xs mt-2" style="color:rgba(156,163,175,.65);">
+        长按结束自动起卦，系统将采集毫秒时间戳与环境噪声生成三数。
+      </p>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.75);">Num1</label>
+        <input id="mh-num1" readonly class="inp w-full rounded-xl px-3 py-2.5 text-sm" placeholder="---" />
+      </div>
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.75);">Num2</label>
+        <input id="mh-num2" readonly class="inp w-full rounded-xl px-3 py-2.5 text-sm" placeholder="---" />
+      </div>
+      <div>
+        <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.75);">Num3</label>
+        <input id="mh-num3" readonly class="inp w-full rounded-xl px-3 py-2.5 text-sm" placeholder="---" />
+      </div>
+    </div>
+    <div id="mh-preview" class="rounded-xl p-3 text-xs hidden"
+         style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.25);"></div>
+    <div class="mt-3">
+      <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.8);">当前面向方位（定位失败时使用）</label>
+      <select id="mh-facing" class="inp w-full rounded-xl px-3 py-2.5 text-sm">
+        <option value="北">北</option>
+        <option value="东北">东北</option>
+        <option value="东">东</option>
+        <option value="东南">东南</option>
+        <option value="南">南</option>
+        <option value="西南">西南</option>
+        <option value="西">西</option>
+        <option value="西北">西北</option>
+      </select>
+    </div>
+    <div id="mh-outer" class="rounded-xl p-3 text-xs mt-3 hidden"
+         style="background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.25);"></div>
+  </section>
+
+  <!-- ────── 推演按钮 ────── -->
+  <button id="btn-calc" onclick="runCurrentMode()"
+          class="btn-primary w-full py-4 rounded-2xl font-bold text-white text-lg mb-8
+                 flex items-center justify-center gap-3 select-none">
+    <span id="calc-icon" class="text-2xl" style="filter:drop-shadow(0 0 7px var(--gold));">☯</span>
+    <span id="calc-text">开始推演命盘</span>
+  </button>
+
+  <!-- ────── 结果区 ────── -->
+  <section id="result-section" class="hidden mb-6">
+    <div id="result-card" class="glass rounded-2xl p-6 fade-up">
+
+      <!-- 四柱八字展示 -->
+      <div id="result-bazi-block" class="mb-5 pb-5" style="border-bottom:1px solid rgba(245,197,24,.15);">
+        <p class="text-xs tracking-widest mb-3" style="color:rgba(196,181,253,.7);">
+          命盘八字
+        </p>
+        <div id="bazi-pillars" class="flex justify-center gap-3 flex-wrap"></div>
+      </div>
+
+      <div id="result-meihua-block" class="mb-5 pb-5 hidden" style="border-bottom:1px solid rgba(245,197,24,.15);">
+        <p class="text-xs tracking-widest mb-3" style="color:rgba(196,181,253,.7);">
+          梅花易数卦象
+        </p>
+        <div id="mh-result-meta" class="text-xs mb-3" style="color:rgba(196,181,253,.85);"></div>
+        <div id="mh-result-hex"></div>
+      </div>
+
+      <!-- AI 命理解读 -->
+      <div class="mb-5">
+        <p class="text-xs tracking-widest mb-3" style="color:rgba(196,181,253,.7);">
+          命理解读
+        </p>
+        <div id="result-text" class="text-sm" style="color:rgba(226,226,240,.9);"></div>
+      </div>
+
+      <!-- 操作栏 -->
+      <div class="flex gap-3">
+        <button onclick="doScreenshot()"
+                class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style="background:rgba(245,197,24,.08);
+                       border:1px solid rgba(245,197,24,.3);
+                       color:var(--gold);">📸 保存图片</button>
+        <button onclick="runCurrentMode()"
+                class="flex-1 py-2.5 rounded-xl text-sm font-medium
+                       text-gray-400 hover:text-white transition-colors"
+                style="background:rgba(255,255,255,.04);
+                       border:1px solid rgba(255,255,255,.1);">🔄 重新推演</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ────── 往期推演记录 ────── -->
+  <section class="mb-24">
+    <div class="flex items-center gap-2">
+      <!-- 折叠开关 -->
+      <button onclick="toggleHist()"
+              class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl
+                     text-left transition-all"
+              style="background:rgba(255,255,255,.025);
+                     border:1px solid rgba(255,255,255,.07);">
+        <span class="text-sm flex items-center gap-2" style="color:rgba(156,163,175,.8);">
+          <span>📜</span>
+          <span>往期推演记录</span>
+          <span id="hist-badge" class="hidden px-2 py-0.5 rounded-full text-xs"
+                style="background:rgba(124,58,237,.3);color:#c4b5fd;"></span>
+        </span>
+        <span id="hist-arrow" class="text-xs text-gray-500 transition-transform duration-300">▼</span>
+      </button>
+      <!-- 清空按钮（有记录时显示） -->
+      <button id="btn-clear-hist" onclick="clearAllHist()"
+              class="hidden shrink-0 px-3 py-3 rounded-xl text-xs font-medium transition-all"
+              style="background:rgba(239,68,68,.08);
+                     border:1px solid rgba(239,68,68,.22);
+                     color:rgba(252,165,165,.8);">🗑 清空</button>
+    </div>
+    <div id="hist-list" class="hidden mt-3 space-y-2.5"></div>
+  </section>
+
+</div><!-- /main -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     右下角固定区：Toast + 设置按钮
+     ══════════════════════════════════════════════════════════════ -->
+<div class="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-30">
+
+  <!-- Toast 通知气泡 -->
+  <div id="toast"
+       class="glass hidden rounded-xl px-4 py-2.5 text-sm max-w-[240px]"
+       style="border-color:rgba(124,58,237,.4);"></div>
+
+  <!-- 密钥按钮 -->
+  <button onclick="openSettings()" aria-label="输入使用密钥"
+          class="w-14 h-14 rounded-full flex items-center justify-center
+                 text-2xl transition-all hover:scale-110 active:scale-95"
+          style="background:linear-gradient(135deg,var(--purple),var(--indigo));
+                 border:1px solid rgba(245,197,24,.35);
+                 box-shadow:0 0 24px rgba(124,58,237,.55);">🔑</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     JavaScript
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────────────────────────────────────
+   ★ 开发者配置区（部署前填写，用户不可见）
+   ───────────────────────────────────────────────────────────────── */
+// 第一步：在 TCB 控制台 → 云函数 → fortune → 触发管理 → 新增触发器（HTTP触发器）
+// 第二步：把生成的触发器 URL 填到下面（格式如 https://xxxx.service.tcloudbase.com/fortune）
+const FORTUNE_HTTP_URL = 'https://oscar-test-1g5f50fp438242fe-1321886051.ap-shanghai.app.tcloudbase.com/fortune'; // ← 替换为 HTTP 触发器地址
+const BUY_KEY_URL      = 'https://c.fakamiao.top/itemDetail/13732?shopId=aWNX4H'; // 发卡喵商品购买页
+
+/* ─────────────────────────────────────────────────────────────────
+   全局状态
+   ───────────────────────────────────────────────────────────────── */
+let gender   = 'male';   // 'male' | 'female'
+let calMode  = 'solar';  // 'solar' | 'lunar'
+let currentMode = 'bazi'; // 'bazi' | 'meihua'
+let busy     = false;
+let histOpen = false;
+let energyPressStart = 0;
+let energyTimer = null;
+let energyTick = null;
+let meihuaData = null;
+let outerResponse = null;
+let energyLocked = false; // 注入一次后需点击“解卦”才可再次注入
+
+/* ─────────────────────────────────────────────────────────────────
+   页面初始化
+   ───────────────────────────────────────────────────────────────── */
+(function init() {
+  spawnStars();
+  buildYearOptions();
+  buildMonthOptions();
+  updateDays();
+  initEnergyButton();
+  setMode('bazi');
+  renderHistBadge();
+})();
+
+/* 生成 90 颗闪烁星星 */
+function spawnStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 90; i++) {
+    const s = document.createElement('div');
+    const sz = Math.random() < 0.7 ? 1 : 2;
+    s.className = 'star';
+    s.style.cssText = [
+      `left:${(Math.random() * 100).toFixed(1)}%`,
+      `top:${(Math.random() * 100).toFixed(1)}%`,
+      `width:${sz}px`, `height:${sz}px`,
+      `--dur:${(2.5 + Math.random() * 3.5).toFixed(1)}s`,
+      `--delay:${(Math.random() * 4).toFixed(1)}s`,
+      `opacity:${(0.15 + Math.random() * 0.65).toFixed(2)}`,
+    ].join(';');
+    c.appendChild(s);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   日期选择器
+   ───────────────────────────────────────────────────────────────── */
+function buildYearOptions() {
+  const sel = document.getElementById('sel-year');
+  const cur = new Date().getFullYear();
+  for (let y = cur; y >= 1940; y--) {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = `${y} 年`;
+    sel.appendChild(o);
+  }
+  sel.value = 1990;
+}
+
+function buildMonthOptions() {
+  const sel = document.getElementById('sel-month');
+  sel.innerHTML = '';
+  if (calMode === 'solar') {
+    for (let m = 1; m <= 12; m++) {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = `${m} 月`;
+      sel.appendChild(o);
+    }
+  } else {
+    const names = ['正月','二月','三月','四月','五月','六月',
+                   '七月','八月','九月','十月','冬月','腊月'];
+    names.forEach((n, i) => {
+      const o = document.createElement('option');
+      o.value = i + 1; o.textContent = n;
+      sel.appendChild(o);
+    });
+  }
+}
+
+/* 根据年月更新日数（支持农历月长度计算） */
+function updateDays() {
+  const year  = +document.getElementById('sel-year').value  || 1990;
+  const month = +document.getElementById('sel-month').value || 1;
+  const sel   = document.getElementById('sel-day');
+  const prev  = +sel.value || 1;
+
+  let days;
+  if (calMode === 'solar') {
+    days = new Date(year, month, 0).getDate(); // JS Date 溢出技巧
+  } else {
+    /* 农历月天数：用下月初一与本月初一的公历差 */
+    try {
+      const lm = Lunar.fromYmd(year, month, 1);
+      let ny = year, nm = month + 1;
+      if (nm > 12) { nm = 1; ny++; }
+      const lNext  = Lunar.fromYmd(ny, nm, 1);
+      const s1     = lm.getSolar();
+      const s2     = lNext.getSolar();
+      const d1     = new Date(s1.getYear(), s1.getMonth() - 1, s1.getDay());
+      const d2     = new Date(s2.getYear(), s2.getMonth() - 1, s2.getDay());
+      days         = Math.round((d2 - d1) / 86400000);
+      if (days < 28 || days > 31) days = 30; // 安全兜底
+    } catch (e) {
+      days = 30;
+    }
+  }
+
+  /* 农历日名称 */
+  const LUNAR_DAYS = [
+    '初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+    '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+    '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十',
+  ];
+
+  sel.innerHTML = '';
+  for (let d = 1; d <= days; d++) {
+    const o = document.createElement('option');
+    o.value = d;
+    o.textContent = calMode === 'solar' ? `${d} 日` : LUNAR_DAYS[d - 1];
+    sel.appendChild(o);
+  }
+  sel.value = Math.min(prev, days);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   性别 & 历法切换
+   ───────────────────────────────────────────────────────────────── */
+function setGender(g) {
+  gender = g;
+  const m = document.getElementById('btn-male');
+  const f = document.getElementById('btn-female');
+  const ON  = 'background:linear-gradient(135deg,var(--purple),var(--indigo));' +
+              'border:1px solid rgba(245,197,24,.35);color:white;';
+  const OFF = 'background:rgba(255,255,255,.03);' +
+              'border:1px solid rgba(255,255,255,.1);color:#9ca3af;';
+  m.style.cssText = g === 'male'   ? ON  : OFF;
+  f.style.cssText = g === 'female' ? ON  : OFF;
+}
+
+function setCalendar(mode) {
+  calMode = mode;
+  const s = document.getElementById('cal-solar');
+  const l = document.getElementById('cal-lunar');
+  const h = document.getElementById('cal-hint');
+  const ON  = 'background:linear-gradient(135deg,var(--purple),var(--indigo));color:var(--gold);';
+  const OFF = 'background:transparent;color:#9ca3af;';
+  if (mode === 'solar') {
+    s.style.cssText = ON;  l.style.cssText = OFF;
+    h.textContent = '阳历';
+  } else {
+    l.style.cssText = ON;  s.style.cssText = OFF;
+    h.textContent = '阴历（农历）';
+  }
+  buildMonthOptions();
+  updateDays();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   模式切换（八字 / 梅花易数）
+   ───────────────────────────────────────────────────────────────── */
+function setMode(mode) {
+  currentMode = mode;
+  const tb = document.getElementById('tab-bazi');
+  const tm = document.getElementById('tab-meihua');
+  const baziSec = document.getElementById('bazi-section');
+  const mhSec = document.getElementById('meihua-section');
+  const calcText = document.getElementById('calc-text');
+  const calcIcon = document.getElementById('calc-icon');
+  tb.classList.toggle('active', mode === 'bazi');
+  tm.classList.toggle('active', mode === 'meihua');
+  baziSec.classList.toggle('hidden', mode !== 'bazi');
+  mhSec.classList.toggle('hidden', mode !== 'meihua');
+  calcText.textContent = mode === 'bazi' ? '开始推演命盘' : '开始解卦';
+  calcIcon.textContent = mode === 'bazi' ? '☯' : '☰';
+}
+
+function runCurrentMode() {
+  if (currentMode === 'meihua') return runMeihua();
+  return runFortune();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   八字计算（lunar-javascript）
+   ───────────────────────────────────────────────────────────────── */
+function calcBazi(year, month, day, hour) {
+  let solar;
+  if (calMode === 'solar') {
+    solar = Solar.fromYmdHms(year, month, day, hour, 0, 0);
+  } else {
+    /* 农历 → 公历 */
+    const lObj = Lunar.fromYmd(year, month, day);
+    const s    = lObj.getSolar();
+    solar      = Solar.fromYmdHms(s.getYear(), s.getMonth(), s.getDay(), hour, 0, 0);
+  }
+
+  const lunarObj = solar.getLunar();
+  const ec       = lunarObj.getEightChar();
+
+  return {
+    /* 四柱天干地支 */
+    yearGan:  ec.getYearGan(),   yearZhi:  ec.getYearZhi(),
+    monthGan: ec.getMonthGan(),  monthZhi: ec.getMonthZhi(),
+    dayGan:   ec.getDayGan(),    dayZhi:   ec.getDayZhi(),
+    timeGan:  ec.getTimeGan(),   timeZhi:  ec.getTimeZhi(),
+    /* 纳音 */
+    yearNaYin:  ec.getYearNaYin(),
+    monthNaYin: ec.getMonthNaYin(),
+    dayNaYin:   ec.getDayNaYin(),
+    timeNaYin:  ec.getTimeNaYin(),
+    /* 五行 */
+    yearWuXing:  ec.getYearWuXing(),
+    monthWuXing: ec.getMonthWuXing(),
+    dayWuXing:   ec.getDayWuXing(),
+    timeWuXing:  ec.getTimeWuXing(),
+    /* 农历显示 */
+    lunarYear:  lunarObj.getYearInChinese() + '年',
+    lunarMonth: lunarObj.getMonthInChinese() + '月',
+    lunarDay:   lunarObj.getDayInChinese(),
+    /* 公历（用于历史记录显示） */
+    solarDate: `${solar.getYear()}-${pad2(solar.getMonth())}-${pad2(solar.getDay())}`,
+  };
+}
+
+/* 渲染四柱卡片 */
+function renderPillars(bazi) {
+  const pillars = [
+    { lbl:'年柱', gan:bazi.yearGan,  zhi:bazi.yearZhi,  ny:bazi.yearNaYin,  wx:bazi.yearWuXing  },
+    { lbl:'月柱', gan:bazi.monthGan, zhi:bazi.monthZhi, ny:bazi.monthNaYin, wx:bazi.monthWuXing },
+    { lbl:'日柱', gan:bazi.dayGan,   zhi:bazi.dayZhi,   ny:bazi.dayNaYin,   wx:bazi.dayWuXing   },
+    { lbl:'时柱', gan:bazi.timeGan,  zhi:bazi.timeZhi,  ny:bazi.timeNaYin,  wx:bazi.timeWuXing  },
+  ];
+  document.getElementById('bazi-pillars').innerHTML = pillars.map(p => `
+    <div class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl"
+         style="background:rgba(124,58,237,.1);
+                border:1px solid rgba(124,58,237,.22);
+                min-width:68px;">
+      <span class="text-xs" style="color:rgba(196,181,253,.7);">${p.lbl}</span>
+      <span class="text-[1.65rem] font-bold leading-tight" style="color:var(--gold);">${p.gan}</span>
+      <span class="text-[1.65rem] font-bold leading-tight text-white">${p.zhi}</span>
+      <span class="text-[10px] text-center leading-snug mt-0.5"
+            style="color:rgba(156,163,175,.8);">${p.ny}</span>
+      <span class="text-[10px] px-2 py-0.5 rounded-full mt-0.5"
+            style="background:rgba(79,70,229,.3);color:#a5b4fc;">${p.wx}</span>
+    </div>
+  `).join('');
+}
+
+const TRIGRAM_MAP = {
+  1: { name: '乾', wuxing: '金', lines: [1,1,1] },
+  2: { name: '兑', wuxing: '金', lines: [1,1,0] },
+  3: { name: '离', wuxing: '火', lines: [1,0,1] },
+  4: { name: '震', wuxing: '木', lines: [1,0,0] },
+  5: { name: '巽', wuxing: '木', lines: [0,1,1] },
+  6: { name: '坎', wuxing: '水', lines: [0,1,0] },
+  7: { name: '艮', wuxing: '土', lines: [0,0,1] },
+  8: { name: '坤', wuxing: '土', lines: [0,0,0] },
+};
+
+const TRIGRAM_NAME_TO_NUM = { '乾':1, '兑':2, '离':3, '震':4, '巽':5, '坎':6, '艮':7, '坤':8 };
+const GUA_DICT_FALLBACK = {
+  "11": { name: "乾为天", meaning: "大通，利于正道", advice: "刚健中正，见龙在田" },
+  "88": { name: "坤为地", meaning: "柔顺厚德，包容万物", advice: "宜守不宜进，厚德载物" },
+  "66": { name: "坎为水", meaning: "重重险阻，心中常忧", advice: "常思忧患，以诚破险" },
+  "33": { name: "离为火", meaning: "明察秋毫，文明光辉", advice: "保持清明，切忌虚荣" },
+  "77": { name: "艮为山", meaning: "停止不前，适可而止", advice: "行止有节，动静不失其时" },
+  "55": { name: "巽为风", meaning: "谦逊顺从，随风潜入", advice: "顺应趋势，利见贵人" },
+  "44": { name: "震为雷", meaning: "震惊百里，声势浩大", advice: "戒慎恐惧，反省自身" },
+  "22": { name: "兑为泽", meaning: "喜悦交流，和睦相处", advice: "和悦处事，谨防言语是非" },
+};
+
+function initEnergyButton() {
+  const btn = document.getElementById('btn-energy');
+  const wrap = document.getElementById('energy-wrap');
+  if (!btn || !wrap) return;
+
+  const start = (e) => {
+    e.preventDefault();
+    if (busy) return;
+    if (energyLocked) {
+      toast('请先点击一次“开始解卦”，再进行下一次注入', 'info');
+      return;
+    }
+    energyPressStart = performance.now();
+    wrap.classList.add('charging');
+    btn.textContent = '能量注入中（3.0s）';
+    energyTick = setInterval(() => {
+      const elapsed = (performance.now() - energyPressStart) / 1000;
+      const left = Math.max(0, 3 - elapsed).toFixed(1);
+      btn.textContent = elapsed >= 3 ? '松开完成起卦' : `能量注入中（${left}s）`;
+    }, 80);
+    energyTimer = setTimeout(() => { btn.textContent = '松开完成起卦'; }, 3000);
+  };
+
+  const end = (e) => {
+    e.preventDefault();
+    if (!energyPressStart) return;
+    const held = performance.now() - energyPressStart;
+    clearTimeout(energyTimer);
+    clearInterval(energyTick);
+    wrap.classList.remove('charging');
+    energyPressStart = 0;
+    btn.textContent = '按住注入能量（3.0s）';
+    if (held < 3000) {
+      toast('请长按至少 3 秒再松开', 'info');
+      return;
+    }
+    generateMeihuaNumbers();
+  };
+
+  btn.addEventListener('mousedown', start);
+  btn.addEventListener('touchstart', start, { passive: false });
+  btn.addEventListener('mouseup', end);
+  btn.addEventListener('mouseleave', end);
+  btn.addEventListener('touchend', end);
+  btn.addEventListener('touchcancel', end);
+}
+
+function setEnergyLocked(locked) {
+  energyLocked = locked;
+  const btn = document.getElementById('btn-energy');
+  const wrap = document.getElementById('energy-wrap');
+  if (!btn || !wrap) return;
+  if (locked) {
+    btn.disabled = true;
+    btn.textContent = '已注入，先点击“开始解卦”';
+    wrap.classList.remove('charging');
+    wrap.style.opacity = '.85';
+  } else {
+    btn.disabled = false;
+    btn.textContent = '按住注入能量（3.0s）';
+    wrap.style.opacity = '1';
+  }
+}
+
+function restoreMeihuaDataFromInputs() {
+  const n1 = +document.getElementById('mh-num1').value;
+  const n2 = +document.getElementById('mh-num2').value;
+  const n3 = +document.getElementById('mh-num3').value;
+  if (n1 >= 1 && n1 <= 999 && n2 >= 1 && n2 <= 999 && n3 >= 1 && n3 <= 999) {
+    meihuaData = calcMeihua(n1, n2, n3);
+    return true;
+  }
+  return false;
+}
+
+function numberMod(v, mod) {
+  const r = v % mod;
+  return r === 0 ? mod : r;
+}
+
+function trigramByLines(lines3) {
+  const k = lines3.join('');
+  const map = {
+    '111': 1, '110': 2, '101': 3, '100': 4,
+    '011': 5, '010': 6, '001': 7, '000': 8,
+  };
+  const n = map[k] || 0;
+  if (!n || !TRIGRAM_MAP[n]) return { name: '未定', wuxing: '中', lines: lines3, num: 0 };
+  return { ...TRIGRAM_MAP[n], num: n };
+}
+
+function resolveGuaInfo(upperName, lowerName) {
+  const upper = TRIGRAM_NAME_TO_NUM[upperName] || 0;
+  const lower = TRIGRAM_NAME_TO_NUM[lowerName] || 0;
+  const key = `${upper}${lower}`;
+  const dict = (window.GUA_DICT && typeof window.GUA_DICT === 'object') ? window.GUA_DICT : GUA_DICT_FALLBACK;
+  const hit = dict[key];
+  if (hit) return { key, name: hit.name, guaci: `${hit.meaning || ''}；${hit.advice || ''}` };
+  return { key, name: `${upperName}上${lowerName}下`, guaci: '字典未命中，按体用与动爻综合判断。' };
+}
+
+function generateMeihuaNumbers() {
+  const entropy = [
+    Date.now(),
+    Math.floor(performance.now() * 1000),
+    (window.screen && window.screen.width) || 0,
+    (window.screen && window.screen.height) || 0,
+    (navigator.hardwareConcurrency || 0) * 131,
+    Math.floor((navigator.deviceMemory || 0) * 97),
+    Math.floor(Math.random() * 1e9),
+    Math.floor(Math.random() * 1e9),
+  ];
+  let seed = 2166136261;
+  for (const x of entropy) {
+    seed ^= x;
+    seed = Math.imul(seed, 16777619) >>> 0;
+  }
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    return (seed % 999) + 1;
+  };
+  const n1 = next();
+  const n2 = next();
+  const n3 = next();
+  document.getElementById('mh-num1').value = n1;
+  document.getElementById('mh-num2').value = n2;
+  document.getElementById('mh-num3').value = n3;
+  sampleOuterResponse();
+  meihuaData = calcMeihua(n1, n2, n3);
+  renderMeihuaPreview();
+  setEnergyLocked(true);
+  toast(`起卦完成：${n1} / ${n2} / ${n3}`, 'ok');
+}
+
+function getHourZhiByClock(h) {
+  if (h >= 23 || h < 1) return '子';
+  if (h < 3) return '丑';
+  if (h < 5) return '寅';
+  if (h < 7) return '卯';
+  if (h < 9) return '辰';
+  if (h < 11) return '巳';
+  if (h < 13) return '午';
+  if (h < 15) return '未';
+  if (h < 17) return '申';
+  if (h < 19) return '酉';
+  if (h < 21) return '戌';
+  return '亥';
+}
+
+function getTimeFactor() {
+  const now = new Date();
+  const solar = Solar.fromDate(now);
+  const lunar = solar.getLunar();
+  const month = now.getMonth() + 1;
+  const seasonWuxing = month >= 11 || month <= 1 ? '水旺'
+    : month <= 4 ? '木旺'
+    : month <= 7 ? '火旺'
+    : month <= 10 ? '金旺'
+    : '土旺';
+  return {
+    solar: `${now.getFullYear()}-${pad2(month)}-${pad2(now.getDate())} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`,
+    lunarMonthDay: `${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,
+    hourZhi: getHourZhiByClock(now.getHours()),
+    seasonWuxing,
+  };
+}
+
+function geoDirectionByLatLng(lat, lng) {
+  if (lat >= 0 && lng >= 0) return '东北';
+  if (lat >= 0 && lng < 0) return '西北';
+  if (lat < 0 && lng >= 0) return '东南';
+  return '西南';
+}
+
+function renderOuterResponse() {
+  const box = document.getElementById('mh-outer');
+  if (!outerResponse) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div class="mb-2" style="color:rgba(196,181,253,.9);">外应采样（起卦瞬间）</div>
+    <span class="outer-tag">农历：${outerResponse.timeFactor.lunarMonthDay}</span>
+    <span class="outer-tag">时支：${outerResponse.timeFactor.hourZhi}时</span>
+    <span class="outer-tag">季节旺衰：${outerResponse.timeFactor.seasonWuxing}</span>
+    <span class="outer-tag">方位：${outerResponse.directionFactor.direction}</span>
+    <div class="mt-2" style="color:rgba(156,163,175,.8);">${outerResponse.directionFactor.note}</div>
+  `;
+}
+
+function sampleOuterResponse() {
+  const facing = document.getElementById('mh-facing').value || '北';
+  const timeFactor = getTimeFactor();
+  const fallback = {
+    direction: facing,
+    source: 'manual',
+    note: '定位不可用，已采用你选择的面向方位。',
+  };
+  if (!navigator.geolocation) {
+    outerResponse = { timeFactor, directionFactor: fallback };
+    renderOuterResponse();
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      outerResponse = {
+        timeFactor,
+        directionFactor: {
+          direction: geoDirectionByLatLng(lat, lng),
+          source: 'geolocation',
+          note: `根据粗略经纬度推断方位（lat:${lat.toFixed(2)}, lng:${lng.toFixed(2)}）。`,
+        },
+      };
+      renderOuterResponse();
+    },
+    () => {
+      outerResponse = { timeFactor, directionFactor: fallback };
+      renderOuterResponse();
+    },
+    { enableHighAccuracy: false, timeout: 1600, maximumAge: 600000 }
+  );
+}
+
+function wuxingRelation(tiWuXing, yongWuXing) {
+  let relation = '失衡';
+  const sheng = { '金':'水', '水':'木', '木':'火', '火':'土', '土':'金' };
+  const ke = { '金':'木', '木':'土', '土':'水', '水':'火', '火':'金' };
+  if (tiWuXing === yongWuXing) relation = '比和';
+  else if (sheng[tiWuXing] === yongWuXing) relation = '体生用';
+  else if (sheng[yongWuXing] === tiWuXing) relation = '用生体';
+  else if (ke[tiWuXing] === yongWuXing) relation = '体克用';
+  else if (ke[yongWuXing] === tiWuXing) relation = '用克体';
+  const logic = (window.FIVE_ELEMENTS_LOGIC && window.FIVE_ELEMENTS_LOGIC[relation]) || {
+    status: '未定',
+    desc: '五行关系待补充',
+    vibe: '先观察再行动。',
+  };
+  return { relation, ...logic };
+}
+
+function calcMeihua(num1, num2, num3) {
+  const upperNum = numberMod(num1, 8);
+  const lowerNum = numberMod(num2, 8);
+  const movingLine = numberMod(num3, 6);
+  const upper = TRIGRAM_MAP[upperNum];
+  const lower = TRIGRAM_MAP[lowerNum];
+  const benLines = lower.lines.concat(upper.lines);
+  const bianLines = benLines.slice();
+  bianLines[movingLine - 1] = benLines[movingLine - 1] ? 0 : 1;
+  const huLowerLines = [benLines[1], benLines[2], benLines[3]];
+  const huUpperLines = [benLines[2], benLines[3], benLines[4]];
+  const huLines = huLowerLines.concat(huUpperLines);
+
+  const bianLower = trigramByLines(bianLines.slice(0, 3));
+  const bianUpper = trigramByLines(bianLines.slice(3, 6));
+  const huLower = trigramByLines(huLowerLines);
+  const huUpper = trigramByLines(huUpperLines);
+
+  const tiIsLower = movingLine > 3;
+  const tiGua = tiIsLower ? lower : upper;
+  const yongGua = tiIsLower ? upper : lower;
+  const relation = wuxingRelation(tiGua.wuxing, yongGua.wuxing);
+
+  return {
+    nums: { num1, num2, num3, upperNum, lowerNum, movingLine },
+    upper,
+    lower,
+    benGua: resolveGuaInfo(upper.name, lower.name),
+    huGua: resolveGuaInfo(huUpper.name, huLower.name),
+    bianGua: resolveGuaInfo(bianUpper.name, bianLower.name),
+    benLines,
+    huLines,
+    bianLines,
+    huUpper,
+    huLower,
+    bianUpper,
+    bianLower,
+    tiGua,
+    yongGua,
+    relation,
+  };
+}
+
+function renderHexLines(lines, movingLine = 0) {
+  return `
+    <div class="yao-stack">
+      ${lines.map((v, i) => `
+        <div class="yao-line ${movingLine === i + 1 ? 'yao-moving' : ''}">
+          <div class="${v ? 'yao-yang' : 'yao-yin'}"></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderMeihuaPreview() {
+  const box = document.getElementById('mh-preview');
+  if (!meihuaData) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div class="mb-2" style="color:rgba(196,181,253,.92);">
+      上卦：${meihuaData.upper.name}（${meihuaData.upper.wuxing}）
+      · 下卦：${meihuaData.lower.name}（${meihuaData.lower.wuxing}）
+      · 动爻：第 ${meihuaData.nums.movingLine} 爻
+    </div>
+    <div class="mb-2" style="color:rgba(196,181,253,.84);">
+      本卦：${meihuaData.benGua.name} ｜ 互卦：${meihuaData.huGua.name} ｜ 变卦：${meihuaData.bianGua.name}
+    </div>
+    <div style="color:rgba(156,163,175,.8);">
+      体卦：${meihuaData.tiGua.name}(${meihuaData.tiGua.wuxing}) /
+      用卦：${meihuaData.yongGua.name}(${meihuaData.yongGua.wuxing})，
+      ${meihuaData.relation.relation}（${meihuaData.relation.status}）
+    </div>
+  `;
+}
+
+function renderMeihuaResult(question, data) {
+  const meta = document.getElementById('mh-result-meta');
+  const hex = document.getElementById('mh-result-hex');
+  meta.innerHTML = `
+    <div class="mb-1">所问：${question}</div>
+    <div class="mb-1">三数：${data.nums.num1} / ${data.nums.num2} / ${data.nums.num3}，动爻第 ${data.nums.movingLine} 爻</div>
+    <div class="mb-1">本卦：${data.benGua.name}（${data.benGua.guaci}）</div>
+    <div class="mb-1">互卦：${data.huGua.name}（${data.huGua.guaci}）</div>
+    <div class="mb-1">变卦：${data.bianGua.name}（${data.bianGua.guaci}）</div>
+    <div class="mb-1">体用：体卦 ${data.tiGua.name}(${data.tiGua.wuxing})，用卦 ${data.yongGua.name}(${data.yongGua.wuxing})，${data.relation.relation}（${data.relation.status}）</div>
+    <div class="mb-1">断语：${data.relation.desc}</div>
+    <div>行动气场：${data.relation.vibe}</div>
+  `;
+  hex.innerHTML = `
+    <div class="hex-grid">
+      <div class="hex-box">
+        <div class="text-xs text-center mb-1" style="color:var(--gold);">现状 · 本卦</div>
+        <div class="text-[11px] text-center mb-2" style="color:rgba(196,181,253,.75);">${data.benGua.name}</div>
+        ${renderHexLines(data.benLines, data.nums.movingLine)}
+      </div>
+      <div class="hex-box">
+        <div class="text-xs text-center mb-1" style="color:var(--gold);">过程 · 互卦</div>
+        <div class="text-[11px] text-center mb-2" style="color:rgba(196,181,253,.75);">${data.huGua.name}</div>
+        ${renderHexLines(data.huLines, 0)}
+      </div>
+      <div class="hex-box">
+        <div class="text-xs text-center mb-1" style="color:var(--gold);">未来 · 变卦</div>
+        <div class="text-[11px] text-center mb-2" style="color:rgba(196,181,253,.75);">${data.bianGua.name}</div>
+        ${renderHexLines(data.bianLines, data.nums.movingLine)}
+      </div>
+    </div>
+  `;
+  renderOuterResponse();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   主推演流程
+   ───────────────────────────────────────────────────────────────── */
+async function runFortune() {
+  if (busy) return;
+
+  /* 校验姓名 */
+  const name = document.getElementById('inp-name').value.trim();
+  if (!name) { toast('请先输入姓名', 'err'); return; }
+
+  /* 校验用户密钥 */
+  const userKey = localStorage.getItem('ft_user_key');
+  if (!userKey) {
+    toast('请先点击右下角 🔑 输入您的使用密钥', 'err');
+    openSettings();
+    return;
+  }
+
+  const year  = +document.getElementById('sel-year').value;
+  const month = +document.getElementById('sel-month').value;
+  const day   = +document.getElementById('sel-day').value;
+  const hour  = +document.getElementById('sel-hour').value;
+
+  /* 计算八字 */
+  let bazi;
+  try {
+    bazi = calcBazi(year, month, day, hour);
+  } catch (e) {
+    toast('生辰信息有误，请重新检查', 'err');
+    return;
+  }
+
+  busy = true;
+  document.getElementById('btn-calc').disabled = true;
+  document.getElementById('result-section').classList.add('hidden');
+  showLoading();
+
+  const t0 = Date.now();
+
+  try {
+    /* 调用云函数（HTTP 触发器，无需 SDK） */
+    const res = await callFortune({
+      userKey,
+      name,
+      gender:   gender === 'male' ? '男' : '女',
+      baziInfo: bazi,
+    });
+
+    /* 保证加载动画至少展示 2 秒（仪式感） */
+    const elapsed = Date.now() - t0;
+    if (elapsed < 2000) await sleep(2000 - elapsed);
+
+    hideLoading();
+
+    /* 处理业务错误（积分不足 / 密钥无效等） */
+    if (res.code !== 0) {
+      toast(res.message || '推演失败，请检查密钥', 'err');
+      if (res.code === 1001 || res.code === 1002) openSettings();
+      return;
+    }
+
+    /* 渲染四柱 */
+    document.getElementById('result-bazi-block').classList.remove('hidden');
+    document.getElementById('result-meihua-block').classList.add('hidden');
+    renderPillars(bazi);
+
+    /* 显示结果区 */
+    const sec = document.getElementById('result-section');
+    sec.classList.remove('hidden');
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    /* 打字机效果输出 AI 文案 */
+    await typewriter('result-text', res.data.result);
+
+    /* 保存到历史记录 */
+    saveHist({
+      type:      'bazi',
+      id:        Date.now(),
+      ts:        new Date().toLocaleString('zh-CN'),
+      name,
+      gender:    gender === 'male' ? '男' : '女',
+      solarDate: bazi.solarDate,
+      bazi,
+      text:      res.data.result,
+    });
+    renderHistBadge();
+
+  } catch (e) {
+    hideLoading();
+    console.error('[runFortune]', e);
+    toast('推演失败：' + (e.message || '网络异常'), 'err');
+  } finally {
+    busy = false;
+    document.getElementById('btn-calc').disabled = false;
+  }
+}
+
+async function runMeihua() {
+  if (busy) return;
+  if (energyLocked) setEnergyLocked(false); // 用户已点击“解卦”，允许下一轮注入
+  const question = document.getElementById('inp-question').value.trim();
+  if (!question) { toast('请先输入所求之事', 'err'); return; }
+  if (!meihuaData && !restoreMeihuaDataFromInputs()) {
+    toast('请先长按“注入当前能量起卦”按钮', 'err');
+    return;
+  }
+  if (!outerResponse) sampleOuterResponse();
+
+  const userKey = localStorage.getItem('ft_user_key');
+  if (!userKey) {
+    toast('请先点击右下角 🔑 输入您的使用密钥', 'err');
+    openSettings();
+    return;
+  }
+
+  busy = true;
+  document.getElementById('btn-calc').disabled = true;
+  document.getElementById('result-section').classList.add('hidden');
+  showLoading();
+  const t0 = Date.now();
+
+  try {
+    const payload = {
+      apiKey: userKey,
+      type: 'meihua',
+      question,
+      outerResponse,
+      hexagramData: {
+        benGuaCode: `${meihuaData.nums.upperNum}${meihuaData.nums.lowerNum}`,
+        benGuaKey: meihuaData.benGua.key,
+        benGuaName: meihuaData.benGua.name,
+        huGuaCode: `${meihuaData.huUpper.num}${meihuaData.huLower.num}`,
+        huGuaKey: meihuaData.huGua.key,
+        huGuaName: meihuaData.huGua.name,
+        bianGuaCode: `${meihuaData.bianUpper.num}${meihuaData.bianLower.num}`,
+        bianGuaKey: meihuaData.bianGua.key,
+        bianGuaName: meihuaData.bianGua.name,
+        upper: meihuaData.upper.name,
+        lower: meihuaData.lower.name,
+        movingLine: meihuaData.nums.movingLine,
+        tiGua: `${meihuaData.tiGua.name}(${meihuaData.tiGua.wuxing})`,
+        yongGua: `${meihuaData.yongGua.name}(${meihuaData.yongGua.wuxing})`,
+        tiWuxing: meihuaData.tiGua.wuxing,
+        yongWuxing: meihuaData.yongGua.wuxing,
+        relation: meihuaData.relation.relation,
+        status: meihuaData.relation.status,
+        desc: meihuaData.relation.desc,
+        vibe: meihuaData.relation.vibe,
+        nums: meihuaData.nums,
+        benLines: meihuaData.benLines,
+        huLines: meihuaData.huLines,
+        bianLines: meihuaData.bianLines,
+      },
+    };
+    const res = await callFortune(payload);
+
+    const elapsed = Date.now() - t0;
+    if (elapsed < 2000) await sleep(2000 - elapsed);
+    hideLoading();
+
+    if (res.code !== 0) {
+      toast(res.message || '解卦失败，请检查密钥', 'err');
+      if (res.code === 1001 || res.code === 1002) openSettings();
+      return;
+    }
+
+    document.getElementById('result-bazi-block').classList.add('hidden');
+    document.getElementById('result-meihua-block').classList.remove('hidden');
+    renderMeihuaResult(question, meihuaData);
+
+    const sec = document.getElementById('result-section');
+    sec.classList.remove('hidden');
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    await stagedRenderMeihua('result-text', res.data.result);
+
+    saveHist({
+      type: 'meihua',
+      id: Date.now(),
+      ts: new Date().toLocaleString('zh-CN'),
+      question,
+      meihua: meihuaData,
+      outerResponse,
+      text: res.data.result,
+    });
+    renderHistBadge();
+  } catch (e) {
+    hideLoading();
+    console.error('[runMeihua]', e);
+    toast('解卦失败：' + (e.message || '网络异常'), 'err');
+  } finally {
+    busy = false;
+    document.getElementById('btn-calc').disabled = false;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   调用云函数（HTTP 触发器 + 原生 fetch，无需任何 SDK）
+   触发器地址来自顶部开发者配置区 FORTUNE_HTTP_URL
+   ───────────────────────────────────────────────────────────────── */
+async function callFortune(data) {
+  if (!FORTUNE_HTTP_URL || FORTUNE_HTTP_URL.includes('your-env-id')) {
+    throw new Error('开发者尚未配置 HTTP 触发器地址，请联系管理员');
+  }
+  const resp = await fetch(FORTUNE_HTTP_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(data),
+  });
+  if (!resp.ok) {
+    throw new Error('网络请求失败，状态码：' + resp.status);
+  }
+  return await resp.json();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   打字机逐字渲染（每 25ms 一字）
+   ───────────────────────────────────────────────────────────────── */
+function typewriter(id, text) {
+  return new Promise(resolve => {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i >= text.length) { clearInterval(iv); resolve(); return; }
+      el.textContent += text[i++];
+    }, 25);
+  });
+}
+
+function parseMeihuaSections(text) {
+  const labels = ['【卦象解码】', '【外应分析】', '【过程推演】', '【结局定断】'];
+  const sections = [];
+  for (let i = 0; i < labels.length; i++) {
+    const start = text.indexOf(labels[i]);
+    if (start < 0) continue;
+    let end = text.length;
+    for (let j = i + 1; j < labels.length; j++) {
+      const idx = text.indexOf(labels[j], start + 1);
+      if (idx >= 0) { end = idx; break; }
+    }
+    const raw = text.slice(start, end).trim();
+    const body = raw.replace(labels[i], '').trim();
+    sections.push({ title: labels[i], body: body || '（无输出）' });
+  }
+  if (!sections.length) {
+    return [{ title: '【解卦结果】', body: text.trim() || '（无输出）' }];
+  }
+  return sections;
+}
+
+function markdownLiteToHtml(md) {
+  let html = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/^###\s+(.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^##\s+(.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^-\s+(.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(?:<li>[\s\S]*?<\/li>)/g, m => `<ul>${m}</ul>`);
+  html = html.replace(/\n/g, '<br/>');
+  return html;
+}
+
+async function typewriterElement(el, text, speed = 16) {
+  el.textContent = '';
+  for (let i = 0; i < text.length; i++) {
+    el.textContent += text[i];
+    await sleep(speed);
+  }
+}
+
+async function stagedRenderMeihua(id, text) {
+  const root = document.getElementById(id);
+  root.innerHTML = '';
+  const sections = parseMeihuaSections(text);
+  for (const sec of sections) {
+    const card = document.createElement('div');
+    card.className = 'mb-4 rounded-xl p-3';
+    card.style.cssText = 'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);';
+    const h = document.createElement('div');
+    h.className = 'text-sm mb-2';
+    h.style.cssText = 'color:var(--gold);letter-spacing:.03em;';
+    h.textContent = sec.title;
+    const b = document.createElement('div');
+    b.className = 'text-sm';
+    b.style.cssText = 'color:rgba(226,226,240,.9);line-height:2;';
+    card.appendChild(h);
+    card.appendChild(b);
+    root.appendChild(card);
+    await typewriterElement(b, sec.body, 14);
+    b.innerHTML = markdownLiteToHtml(sec.body);
+    await sleep(220);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   加载遮罩控制
+   ───────────────────────────────────────────────────────────────── */
+function showLoading() {
+  const el = document.getElementById('loading-overlay');
+  el.classList.remove('hidden');
+  el.classList.add('flex');
+}
+function hideLoading() {
+  const el = document.getElementById('loading-overlay');
+  el.classList.add('hidden');
+  el.classList.remove('flex');
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   密钥弹框
+   ───────────────────────────────────────────────────────────────── */
+function openSettings() {
+  /* 填充购买链接（来自开发者配置） */
+  const buyLink = document.getElementById('link-buy');
+  if (buyLink && BUY_KEY_URL && BUY_KEY_URL !== 'https://your-faka-site.com') {
+    buyLink.href = BUY_KEY_URL;
+  } else if (buyLink) {
+    buyLink.style.display = 'none'; /* 未配置时隐藏 */
+  }
+  /* 回显已保存的密钥 */
+  document.getElementById('inp-key').value = localStorage.getItem('ft_user_key') || '';
+  /* 隐藏积分行（打开时重置） */
+  document.getElementById('key-credits-row').classList.add('hidden');
+
+  const m = document.getElementById('settings-modal');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+function closeSettings() {
+  const m = document.getElementById('settings-modal');
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+}
+async function saveSettings() {
+  const key = document.getElementById('inp-key').value.trim();
+  if (!key) { toast('请输入使用密钥', 'err'); return; }
+
+  /* 在线校验密钥是否有效（同时展示剩余积分） */
+  toast('校验密钥中…', 'info');
+  try {
+    const res = await callFortune({ userKey: key, checkOnly: true });
+    if (res.code === 1002) { toast('密钥无效，请检查后重新输入', 'err'); return; }
+    if (res.code === 1001) {
+      toast('密钥已无积分，请购买新密钥', 'err');
+      return;
+    }
+    /* 校验通过：保存并展示积分 */
+    localStorage.setItem('ft_user_key', key);
+    if (res.data && res.data.credits !== undefined) {
+      document.getElementById('key-credits-val').textContent = res.data.credits + ' 次';
+      document.getElementById('key-credits-row').classList.remove('hidden');
+    }
+    toast('密钥有效 ✓ 已保存', 'ok');
+    setTimeout(closeSettings, 1200);
+  } catch (e) {
+    /* 网络异常时仅本地保存，不阻断用户 */
+    localStorage.setItem('ft_user_key', key);
+    toast('密钥已保存（网络异常，跳过校验）', 'info');
+    setTimeout(closeSettings, 1500);
+  }
+}
+function toggleKeyVis() {
+  const i = document.getElementById('inp-key');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+
+/* 点击模态框背景关闭 */
+document.getElementById('settings-modal').addEventListener('click', function (e) {
+  if (e.target === this) closeSettings();
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   历史记录（localStorage，最多 20 条）
+   ───────────────────────────────────────────────────────────────── */
+function getHist() {
+  try { return JSON.parse(localStorage.getItem('ft_history') || '[]'); }
+  catch (e) { return []; }
+}
+function saveHist(rec) {
+  const h = getHist();
+  h.unshift(rec);
+  localStorage.setItem('ft_history', JSON.stringify(h.slice(0, 20)));
+}
+
+/* 更新角标 + 清空按钮可见性 */
+function renderHistBadge() {
+  const n        = getHist().length;
+  const badge    = document.getElementById('hist-badge');
+  const clearBtn = document.getElementById('btn-clear-hist');
+  if (n > 0) {
+    badge.textContent = `${n} 条`;
+    badge.classList.remove('hidden');
+    clearBtn && clearBtn.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+    clearBtn && clearBtn.classList.add('hidden');
+  }
+}
+
+/* 展开/收起整个历史面板 */
+function toggleHist() {
+  histOpen = !histOpen;
+  document.getElementById('hist-list').classList.toggle('hidden', !histOpen);
+  document.getElementById('hist-arrow').style.transform =
+    histOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (histOpen) renderHistList();
+}
+
+/* 渲染历史列表：每条支持原位展开 */
+function renderHistList() {
+  const h  = getHist();
+  const el = document.getElementById('hist-list');
+
+  if (!h.length) {
+    el.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-4xl mb-2" style="opacity:.2;">☯</div>
+        <p class="text-sm" style="color:rgba(156,163,175,.5);">暂无推演记录</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = h.map((r, i) => {
+    const isMeihua = r.type === 'meihua';
+    const tag = isMeihua ? '梅花易数' : '八字命理';
+    const title = isMeihua ? (r.question || '未命名问题') : (r.name || '未命名');
+    const sub = isMeihua
+      ? `动爻第 ${r.meihua?.nums?.movingLine || '-'} 爻`
+      : `${r.gender || ''} ${r.solarDate || ''}`.trim();
+    const tokens = isMeihua
+      ? [
+          `${r.meihua?.benGua?.name || '本卦未定'}`,
+          `${r.meihua?.huGua?.name || '互卦未定'}`,
+          `${r.meihua?.bianGua?.name || '变卦未定'}`,
+          `${r.meihua?.relation?.relation || '关系待定'}`,
+        ]
+      : [r.bazi.yearGan+r.bazi.yearZhi, r.bazi.monthGan+r.bazi.monthZhi,
+         r.bazi.dayGan+r.bazi.dayZhi,   r.bazi.timeGan+r.bazi.timeZhi];
+    const detail = isMeihua ? `
+      <div class="text-xs leading-6 rounded-xl p-3 mb-3"
+           style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.2);color:rgba(226,226,240,.9);">
+        三数：${r.meihua?.nums?.num1 || '-'} / ${r.meihua?.nums?.num2 || '-'} / ${r.meihua?.nums?.num3 || '-'}<br/>
+        体卦：${r.meihua?.tiGua?.name || '?'}(${r.meihua?.tiGua?.wuxing || '?'})，
+        用卦：${r.meihua?.yongGua?.name || '?'}(${r.meihua?.yongGua?.wuxing || '?'})，
+        ${r.meihua?.relation?.relation || '-'}（${r.meihua?.relation?.status || '-'}）<br/>
+        外应：${r.outerResponse?.timeFactor?.lunarMonthDay || '-'} · ${r.outerResponse?.timeFactor?.hourZhi || '-'}时 · ${r.outerResponse?.directionFactor?.direction || '-'}
+      </div>
+    ` : `
+      <div class="flex gap-2 justify-center flex-wrap mb-4">
+        ${[
+          { l:'年柱', g:r.bazi.yearGan,  z:r.bazi.yearZhi  },
+          { l:'月柱', g:r.bazi.monthGan, z:r.bazi.monthZhi },
+          { l:'日柱', g:r.bazi.dayGan,   z:r.bazi.dayZhi   },
+          { l:'时柱', g:r.bazi.timeGan,  z:r.bazi.timeZhi  },
+        ].map(p => `
+          <div class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl"
+               style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);min-width:52px;">
+            <span class="text-[9px]" style="color:rgba(196,181,253,.6);">${p.l}</span>
+            <span class="text-xl font-bold leading-tight" style="color:var(--gold);">${p.g}</span>
+            <span class="text-xl font-bold leading-tight text-white">${p.z}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    return `
+    <div class="hist-item glass rounded-2xl overflow-hidden" id="hist-card-${i}">
+
+      <!-- 折叠头：点击展开 / 收起 -->
+      <div class="flex items-start gap-3 p-4 pl-5 cursor-pointer select-none"
+           onclick="toggleHistItem(${i})">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-semibold text-white text-sm">${title}</span>
+            <span class="text-xs" style="color:#9ca3af;">${sub}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full"
+                  style="background:rgba(124,58,237,.22);color:#c4b5fd;">${tag}</span>
+          </div>
+          <div class="flex gap-1.5 mt-1.5 flex-wrap">
+            ${tokens.map(p => `<span class="text-xs px-2 py-0.5 rounded"
+              style="background:rgba(245,197,24,.1);color:var(--gold);">${p}</span>`).join('')}
+          </div>
+          <p id="hist-summary-${i}" class="text-xs mt-1.5 clamp2"
+             style="color:rgba(156,163,175,.65);">${r.text}</p>
+        </div>
+        <div class="flex flex-col items-end gap-1.5 shrink-0">
+          <span class="text-xs whitespace-nowrap"
+                style="color:rgba(107,114,128,.7);">${r.ts}</span>
+          <span id="hist-arr-${i}"
+                class="text-xs transition-transform duration-300"
+                style="color:rgba(156,163,175,.4);">▼</span>
+        </div>
+      </div>
+
+      <!-- 展开体（默认折叠） -->
+      <div id="hist-body-${i}" class="hidden hist-open">
+        <div class="px-5 pb-5">
+          <div class="h-px mb-4" style="background:rgba(245,197,24,.12);"></div>
+          ${detail}
+          <!-- 完整 AI 文案 -->
+          <div class="text-xs leading-7 rounded-xl p-4"
+               style="background:rgba(124,58,237,.06);
+                      border:1px solid rgba(124,58,237,.15);
+                      color:rgba(226,226,240,.9);
+                      white-space:pre-wrap;
+                      word-break:break-all;">${r.text}</div>
+          <!-- 操作栏 -->
+          <div class="flex gap-2 mt-3">
+            <button onclick="rerunHist(${i})"
+                    class="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
+                    style="background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(79,70,229,.3));
+                           border:1px solid rgba(124,58,237,.35);color:#c4b5fd;">
+              🔄 重新推演
+            </button>
+            <button onclick="deleteHist(${i}, event)"
+                    class="shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition-all"
+                    style="background:rgba(239,68,68,.08);
+                           border:1px solid rgba(239,68,68,.22);
+                           color:rgba(252,165,165,.8);">🗑 删除</button>
+          </div>
+        </div>
+      </div>
+
+    </div>`;
+  }).join('');
+}
+
+/* 展开 / 收起单条记录 */
+function toggleHistItem(i) {
+  const body    = document.getElementById(`hist-body-${i}`);
+  const arrow   = document.getElementById(`hist-arr-${i}`);
+  const summary = document.getElementById(`hist-summary-${i}`);
+  if (!body) return;
+  const opening = body.classList.contains('hidden');
+  body.classList.toggle('hidden', !opening);
+  if (arrow)   arrow.style.transform = opening ? 'rotate(180deg)' : '';
+  if (summary) summary.classList.toggle('hidden', opening); /* 展开时隐藏摘要，避免重复 */
+}
+
+/* 删除单条记录 */
+function deleteHist(i, e) {
+  if (e) e.stopPropagation();
+  const h = getHist();
+  h.splice(i, 1);
+  localStorage.setItem('ft_history', JSON.stringify(h));
+  renderHistBadge();
+  if (!h.length) {
+    /* 全部删完则收起面板 */
+    histOpen = false;
+    document.getElementById('hist-list').classList.add('hidden');
+    document.getElementById('hist-arrow').style.transform = '';
+  }
+  renderHistList();
+}
+
+/* 清空所有记录 */
+function clearAllHist() {
+  const n = getHist().length;
+  if (!n) return;
+  if (!confirm(`确定清空全部 ${n} 条推演记录？此操作不可恢复。`)) return;
+  localStorage.removeItem('ft_history');
+  renderHistBadge();
+  histOpen = false;
+  document.getElementById('hist-list').classList.add('hidden');
+  document.getElementById('hist-arrow').style.transform = '';
+  renderHistList();
+}
+
+/* 将历史记录加载到表单 + 结果区（滚动到顶） */
+function rerunHist(i) {
+  const r = getHist()[i];
+  if (!r) return;
+  if (r.type === 'meihua') {
+    setMode('meihua');
+    document.getElementById('inp-question').value = r.question || '';
+    if (r.meihua?.nums) {
+      document.getElementById('mh-num1').value = r.meihua.nums.num1;
+      document.getElementById('mh-num2').value = r.meihua.nums.num2;
+      document.getElementById('mh-num3').value = r.meihua.nums.num3;
+    }
+    meihuaData = r.meihua || null;
+    outerResponse = r.outerResponse || null;
+    renderMeihuaPreview();
+    if (meihuaData) {
+      document.getElementById('result-bazi-block').classList.add('hidden');
+      document.getElementById('result-meihua-block').classList.remove('hidden');
+      renderMeihuaResult(r.question || '', meihuaData);
+    }
+  } else {
+    setMode('bazi');
+    document.getElementById('inp-name').value = r.name || '';
+    setGender(r.gender === '男' ? 'male' : 'female');
+    renderPillars(r.bazi);
+    document.getElementById('result-bazi-block').classList.remove('hidden');
+    document.getElementById('result-meihua-block').classList.add('hidden');
+  }
+  document.getElementById('result-text').textContent = r.text || '';
+  const sec = document.getElementById('result-section');
+  sec.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('已加载该条推演记录', 'info');
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   截图（html2canvas，scale:2 高清导出）
+   ───────────────────────────────────────────────────────────────── */
+async function doScreenshot() {
+  toast('正在生成图片…', 'info');
+  try {
+    const canvas = await html2canvas(document.getElementById('result-card'), {
+      backgroundColor: '#0d0d1a',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+    const a      = document.createElement('a');
+    a.download   = `命盘_${Date.now()}.png`;
+    a.href       = canvas.toDataURL('image/png');
+    a.click();
+    toast('图片已保存 ✓', 'ok');
+  } catch (e) {
+    console.error('[screenshot]', e);
+    toast('截图失败，请手动截屏', 'err');
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Toast 通知（3 秒自动消失）
+   ───────────────────────────────────────────────────────────────── */
+let _toastTimer;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  const bg = { ok:'rgba(16,185,129,.15)', err:'rgba(239,68,68,.15)', info:'rgba(124,58,237,.15)' };
+  const bd = { ok:'rgba(16,185,129,.4)',  err:'rgba(239,68,68,.4)',  info:'rgba(124,58,237,.4)'  };
+  const fc = { ok:'#6ee7b7', err:'#fca5a5', info:'#c4b5fd' };
+  el.style.background  = bg[type] || bg.info;
+  el.style.borderColor = bd[type] || bd.info;
+  el.style.color       = fc[type] || fc.info;
+  el.classList.remove('hidden');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   工具函数
+   ───────────────────────────────────────────────────────────────── */
+const pad2  = n => String(n).padStart(2, '0');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+</script>
+
+</body>
+</html>
