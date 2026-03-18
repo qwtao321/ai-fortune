@@ -151,11 +151,21 @@ function buildPrompt({ name, gender, baziInfo: b }) {
 一句七言押韵签文，格式：XXXX，XXXX。
 
 ---
-最后单独输出以下JSON块（不要放在任何段落内，直接写在最后）：
+最后单独输出以下JSON块（不要放在任何段落内，直接写在最后），严格保持合法JSON格式：
 \`\`\`trendData
-{"years":[${Array.from({length:10},(_,i)=>currentYear+i).join(',')}],"career":[0,0,0,0,0,0,0,0,0,0],"wealth":[0,0,0,0,0,0,0,0,0,0],"overall":[0,0,0,0,0,0,0,0,0,0]}
+{
+  "years":[${Array.from({length:10},(_,i)=>currentYear+i).join(',')}],
+  "career":[0,0,0,0,0,0,0,0,0,0],
+  "wealth":[0,0,0,0,0,0,0,0,0,0],
+  "overall":[0,0,0,0,0,0,0,0,0,0],
+  "yearNotes":{${Array.from({length:10},(_,i)=>`"${currentYear+i}":"该年运势说明"`).join(',')}},
+  "pivots":[{"year":0,"label":"转折点名称","reason":"具体原因，干支依据","type":"up"}]
+}
 \`\`\`
-请将上面JSON中的0替换为你基于五行旺衰推算的实际数值（0-100），不要解释数值来源。`;
+填写要求：
+1. career/wealth/overall 的0替换为0-100实际数值
+2. yearNotes 每年写一句该年核心运势提示（10-20字）
+3. pivots 列出1-3个关键转折年份，type为"up"（向好）或"down"（走低），reason说明干支依据`;
 }
 
 function guaMetaFromCode(code, fallbackName) {
