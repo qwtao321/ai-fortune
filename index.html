@@ -30,6 +30,9 @@
   <!-- ③ html2canvas v1.4：result-card 截图导出 PNG -->
   <script src="https://cdn.bootcdn.net/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
           onerror="this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'"></script>
+  <!-- ④ Chart.js：时运能量趋势图 -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+          onerror="this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'"></script>
   <script src="./guaDict.js"></script>
   <script src="./fiveElementsLogic.js"></script>
 
@@ -211,6 +214,20 @@
     }
     .fc-card-body li { list-style: none; padding-left: 1.2em; position: relative; }
     .fc-card-body li::before { content: '▸'; position: absolute; left: 0; color: rgba(196,181,253,.6); }
+    .fc-timeline { display: flex; flex-direction: column; gap: 10px; }
+    .fc-timeline-item { display: flex; align-items: flex-start; gap: 10px; }
+    .fc-year {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(96,165,250,.15);
+      border: 1px solid rgba(96,165,250,.35);
+      color: #93c5fd;
+      margin-top: 2px;
+    }
+    .fc-year-body { font-size: 13px; line-height: 1.8; color: rgba(226,226,240,.88); }
     @keyframes fadeSlideIn {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -707,6 +724,21 @@
           命理解读
         </p>
         <div id="result-text" class="text-sm" style="color:rgba(226,226,240,.9);"></div>
+      </div>
+
+      <!-- 时运能量趋势图（八字模式专属） -->
+      <div id="trend-section" class="mb-5 hidden">
+        <p class="text-xs tracking-widest mb-3" style="color:rgba(196,181,253,.7);">
+          十年时运能量曲线
+        </p>
+        <div class="rounded-2xl p-4" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
+          <canvas id="trend-chart" height="180"></canvas>
+        </div>
+        <div class="flex gap-4 mt-2 justify-center text-xs" style="color:rgba(156,163,175,.7);">
+          <span><span style="display:inline-block;width:10px;height:2px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></span>综合运势</span>
+          <span><span style="display:inline-block;width:10px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>事业运</span>
+          <span><span style="display:inline-block;width:10px;height:2px;background:#fde68a;vertical-align:middle;margin-right:4px;"></span>财运</span>
+        </div>
       </div>
 
       <!-- 操作栏 -->
@@ -1652,6 +1684,7 @@ async function runMeihua() {
 
     document.getElementById('result-bazi-block').classList.add('hidden');
     document.getElementById('result-meihua-block').classList.remove('hidden');
+    document.getElementById('trend-section').classList.add('hidden');
     renderMeihuaResult(question, meihuaData);
 
     const sec = document.getElementById('result-section');
@@ -1705,6 +1738,10 @@ async function callFortune(data) {
 // ─── Fortune Result Card Renderer ───────────────────────────────────────────
 
 const SECTION_META = {
+  '【原局格局】': { icon: '🔮', color: '#a78bfa' },
+  '【当前大运】': { icon: '🌀', color: '#818cf8' },
+  '【近三年走势】': { icon: '📅', color: '#60a5fa', timeline: true },
+  '【方位建议】': { icon: '🧭', color: '#6ee7b7' },
   '【性格特质】': { icon: '🔮', color: '#a78bfa' },
   '【事业走向】': { icon: '🏔️', color: '#60a5fa' },
   '【感情缘分】': { icon: '🌸', color: '#f9a8d4' },
@@ -1758,10 +1795,110 @@ function bodyToHtml(text) {
   return html;
 }
 
+let _trendChart = null;
+
+function extractTrendData(rawText) {
+  const m = rawText.match(/```trendData\s*([\s\S]*?)```/);
+  if (!m) return null;
+  try { return JSON.parse(m[1].trim()); } catch { return null; }
+}
+
+function renderTrendChart(trendData) {
+  const section = document.getElementById('trend-section');
+  if (!trendData || !trendData.years) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
+  _trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trendData.years,
+      datasets: [
+        {
+          label: '综合运势',
+          data: trendData.overall,
+          borderColor: '#a78bfa',
+          backgroundColor: 'rgba(167,139,250,.12)',
+          tension: 0.45,
+          fill: true,
+          pointBackgroundColor: '#a78bfa',
+          pointRadius: 4,
+        },
+        {
+          label: '事业运',
+          data: trendData.career,
+          borderColor: '#60a5fa',
+          backgroundColor: 'transparent',
+          tension: 0.45,
+          pointBackgroundColor: '#60a5fa',
+          pointRadius: 3,
+        },
+        {
+          label: '财运',
+          data: trendData.wealth,
+          borderColor: '#fde68a',
+          backgroundColor: 'transparent',
+          tension: 0.45,
+          pointBackgroundColor: '#fde68a',
+          pointRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15,18,30,.95)',
+          titleColor: '#c4b5fd',
+          bodyColor: '#dce4f1',
+          borderColor: 'rgba(124,93,250,.4)',
+          borderWidth: 1,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}：${ctx.parsed.y}`,
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: 'rgba(156,163,175,.7)', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y: {
+          min: 0, max: 100,
+          ticks: { color: 'rgba(156,163,175,.7)', font: { size: 11 }, stepSize: 20 },
+          grid: { color: 'rgba(255,255,255,.05)' },
+        },
+      },
+    },
+  });
+}
+
+function renderTimelineCard(body, meta, delay) {
+  const card = document.createElement('div');
+  card.className = 'fc-card';
+  card.style.animationDelay = delay + 'ms';
+  const lines = body.split('\n').filter(l => l.trim());
+  const items = lines.map(line => {
+    const m = line.match(/\*\*(\d{4}年)\*\*[：:]?\s*(.*)/);
+    if (m) return `<div class="fc-timeline-item"><span class="fc-year">${m[1]}</span><span class="fc-year-body">${m[2]}</span></div>`;
+    return `<div style="color:rgba(226,226,240,.8);font-size:13px;line-height:1.8;">${line.replace(/\*\*/g,'')}</div>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="fc-card-title" style="color:${meta.color}">
+      <span>${meta.icon}</span><span>${meta.title || '【近三年走势】'}</span>
+    </div>
+    <div class="fc-timeline">${items}</div>`;
+  return card;
+}
+
 function renderFortuneCards(containerId, rawText) {
+  // 提取并渲染趋势图
+  const trendData = extractTrendData(rawText);
+  renderTrendChart(trendData);
+  // 去掉 trendData 代码块再渲染卡片
+  const cleanText = rawText.replace(/```trendData[\s\S]*?```/g, '').trim();
+
   const el = document.getElementById(containerId);
   el.innerHTML = '';
-  const sections = parseFortuneText(rawText);
+  const sections = parseFortuneText(cleanText);
   let delay = 0;
   for (const sec of sections) {
     const meta = SECTION_META[sec.title] || { icon: '✦', color: '#a78bfa' };
@@ -1772,6 +1909,11 @@ function renderFortuneCards(containerId, rawText) {
       card.className = 'fc-seal';
       card.style.animationDelay = delay + 'ms';
       card.innerHTML = `${meta.icon} ${body.replace(/\n/g, '　')}`;
+    } else if (meta.timeline) {
+      const tl = renderTimelineCard(body, { ...meta, title: sec.title }, delay);
+      el.appendChild(tl);
+      delay += 120;
+      continue;
     } else {
       card.className = 'fc-card';
       card.style.animationDelay = delay + 'ms';

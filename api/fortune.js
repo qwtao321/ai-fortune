@@ -121,24 +121,38 @@ module.exports = async function handler(req, res) {
 // ─── Prompts ────────────────────────────────────────────────────────────────
 
 function buildPrompt({ name, gender, baziInfo: b }) {
+  const currentYear = new Date().getFullYear();
   return `命主：${name}，${gender}
 四柱：${b.yearGan}${b.yearZhi}（${b.yearNaYin}·${b.yearWuXing}） ${b.monthGan}${b.monthZhi}（${b.monthNaYin}·${b.monthWuXing}） ${b.dayGan}${b.dayZhi}（${b.dayNaYin}·${b.dayWuXing}） ${b.timeGan}${b.timeZhi}（${b.timeNaYin}·${b.timeWuXing}）
 农历：${b.lunarYear}${b.lunarMonth}${b.lunarDay}
+当前年份：${currentYear}年
 
-你是资深命理师，用老友聊天的语气直接输出结论。
-每段必须点名具体的干支或纳音作为依据（如"日柱${b.dayGan}${b.dayZhi}属XX，说明…"），让用户感受到分析是针对他本人的，而非泛泛而谈。
-每段 3-4 句，禁止出现任何推理过程或计算步骤。
+你是资深命理师，用老友聊天的语气输出以下五段。每段必须点名具体干支作为依据，禁止推理过程。
 
-## 【性格特质】
+## 【原局格局】
+3-4句。从日柱、月柱分析性格天赋和一生最高成就上限，点名具体干支纳音。
 
-## 【事业走向】
+## 【当前大运】
+3-4句。指出命主当前处于哪个10年大运区间，这段时期的核心主题和机遇。
 
-## 【感情缘分】
+## 【近三年走势】
+按年份输出，每年2句：关键词 + 具体建议或风险。
+**${currentYear}年**：
+**${currentYear + 1}年**：
+**${currentYear + 2}年**：
 
-## 【健康提示】
+## 【方位建议】
+结合当前大运和流年，给出办公/居住朝向建议，注明五行补救逻辑，1-2句。
 
 ## 【签文】
-一句七言押韵签文，格式：XXXX，XXXX。`;
+一句七言押韵签文，格式：XXXX，XXXX。
+
+---
+最后单独输出以下JSON块（不要放在任何段落内，直接写在最后）：
+\`\`\`trendData
+{"years":[${Array.from({length:10},(_,i)=>currentYear+i).join(',')}],"career":[0,0,0,0,0,0,0,0,0,0],"wealth":[0,0,0,0,0,0,0,0,0,0],"overall":[0,0,0,0,0,0,0,0,0,0]}
+\`\`\`
+请将上面JSON中的0替换为你基于五行旺衰推算的实际数值（0-100），不要解释数值来源。`;
 }
 
 function guaMetaFromCode(code, fallbackName) {
