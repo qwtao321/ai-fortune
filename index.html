@@ -301,6 +301,20 @@
     animation: movingFlash 1s ease-in-out infinite;
   }
 
+  .dir-btn {
+    padding: 7px 4px;
+    border-radius: 8px;
+    font-size: 12px;
+    border: 1px solid rgba(124,93,250,.25);
+    background: rgba(124,93,250,.08);
+    color: rgba(196,181,253,.75);
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+  }
+  .dir-btn:hover { background: rgba(124,93,250,.22); color: #e9d5ff; }
+  .dir-btn.active { background: rgba(124,93,250,.4); border-color: rgba(196,181,253,.7); color: #f5f3ff; font-weight: 700; }
+  .dir-btn.dir-center { background: transparent; border-color: transparent; color: rgba(196,181,253,.4); font-size: 16px; cursor: default; }
   .outer-tag {
     display: inline-block;
     padding: 2px 8px;
@@ -602,17 +616,23 @@
     <div id="mh-preview" class="rounded-xl p-3 text-xs hidden"
          style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.25);"></div>
     <div class="mt-3">
-      <label class="block text-xs mb-1.5" style="color:rgba(196,181,253,.8);">当前面向方位（定位失败时使用）</label>
-      <select id="mh-facing" class="inp w-full rounded-xl px-3 py-2.5 text-sm">
-        <option value="北">北</option>
-        <option value="东北">东北</option>
-        <option value="东">东</option>
-        <option value="东南">东南</option>
-        <option value="南">南</option>
-        <option value="西南">西南</option>
-        <option value="西">西</option>
-        <option value="西北">西北</option>
-      </select>
+      <div class="flex items-center justify-between mb-1.5">
+        <label class="text-xs" style="color:rgba(196,181,253,.8);">面向方位</label>
+        <button id="btn-compass" onclick="tryCompass()" class="text-xs px-2 py-1 rounded-lg" style="background:rgba(124,93,250,.18);border:1px solid rgba(124,93,250,.4);color:rgba(196,181,253,.9);">📡 自动获取</button>
+      </div>
+      <div id="compass-ring" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px;">
+        <button class="dir-btn" data-dir="西北" onclick="selectDir(this)">西北</button>
+        <button class="dir-btn" data-dir="北"  onclick="selectDir(this)">北</button>
+        <button class="dir-btn" data-dir="东北" onclick="selectDir(this)">东北</button>
+        <button class="dir-btn" data-dir="西"  onclick="selectDir(this)">西</button>
+        <button class="dir-btn dir-center" data-dir="" disabled>☯</button>
+        <button class="dir-btn" data-dir="东"  onclick="selectDir(this)">东</button>
+        <button class="dir-btn" data-dir="西南" onclick="selectDir(this)">西南</button>
+        <button class="dir-btn" data-dir="南"  onclick="selectDir(this)">南</button>
+        <button class="dir-btn" data-dir="东南" onclick="selectDir(this)">东南</button>
+      </div>
+      <input type="hidden" id="mh-facing" value="北" />
+      <div id="compass-status" class="text-xs" style="color:rgba(156,163,175,.7);">请手动选择或点击「自动获取」</div>
     </div>
     <div id="mh-outer" class="rounded-xl p-3 text-xs mt-3 hidden"
          style="background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.25);"></div>
@@ -1173,11 +1193,82 @@ function getTimeFactor() {
   };
 }
 
-function geoDirectionByLatLng(lat, lng) {
-  if (lat >= 0 && lng >= 0) return '东北';
-  if (lat >= 0 && lng < 0) return '西北';
-  if (lat < 0 && lng >= 0) return '东南';
-  return '西南';
+const DIR_MAP = [
+  { name: '北',  min: 337.5, max: 360 },
+  { name: '北',  min: 0,     max: 22.5 },
+  { name: '东北', min: 22.5,  max: 67.5 },
+  { name: '东',  min: 67.5,  max: 112.5 },
+  { name: '东南', min: 112.5, max: 157.5 },
+  { name: '南',  min: 157.5, max: 202.5 },
+  { name: '西南', min: 202.5, max: 247.5 },
+  { name: '西',  min: 247.5, max: 292.5 },
+  { name: '西北', min: 292.5, max: 337.5 },
+];
+
+function alphaToDir(alpha) {
+  return (DIR_MAP.find(d => alpha >= d.min && alpha < d.max) || DIR_MAP[0]).name;
+}
+
+function selectDir(btn) {
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mh-facing').value = btn.dataset.dir;
+  document.getElementById('compass-status').textContent = '已选择：' + btn.dataset.dir;
+}
+
+function highlightDir(dir) {
+  document.querySelectorAll('.dir-btn[data-dir]').forEach(b => {
+    b.classList.toggle('active', b.dataset.dir === dir);
+  });
+  document.getElementById('mh-facing').value = dir;
+}
+
+function tryCompass() {
+  const statusEl = document.getElementById('compass-status');
+  statusEl.textContent = '获取中…';
+
+  function onOrientation(e) {
+    const alpha = e.alpha;
+    if (alpha == null) {
+      statusEl.textContent = '设备不支持指南针，请手动选择';
+      return;
+    }
+    const dir = alphaToDir(alpha);
+    highlightDir(dir);
+    statusEl.textContent = `指南针自动定向：${dir}（${Math.round(alpha)}°）`;
+    window.removeEventListener('deviceorientationabsolute', onOrientation);
+    window.removeEventListener('deviceorientation', onOrientation);
+  }
+
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(state => {
+      if (state === 'granted') {
+        window.addEventListener('deviceorientationabsolute', onOrientation, { once: true });
+        window.addEventListener('deviceorientation', onOrientation, { once: true });
+      } else {
+        statusEl.textContent = '权限被拒绝，请手动选择方位';
+      }
+    }).catch(() => { statusEl.textContent = '权限请求失败，请手动选择'; });
+  } else if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', onOrientation, { once: true });
+    setTimeout(() => { if (!document.getElementById('mh-facing').value) statusEl.textContent = '未收到传感器数据，请手动选择'; }, 2000);
+  } else {
+    statusEl.textContent = '此设备/浏览器不支持指南针，请手动选择';
+  }
+}
+
+function sampleOuterResponse() {
+  const facing = document.getElementById('mh-facing').value || '北';
+  const timeFactor = getTimeFactor();
+  outerResponse = {
+    timeFactor,
+    directionFactor: {
+      direction: facing,
+      source: 'manual',
+      note: '已采用当前选择的面向方位。',
+    },
+  };
+  renderOuterResponse();
 }
 
 function renderOuterResponse() {
@@ -1196,41 +1287,6 @@ function renderOuterResponse() {
     <span class="outer-tag">方位：${outerResponse.directionFactor.direction}</span>
     <div class="mt-2" style="color:rgba(156,163,175,.8);">${outerResponse.directionFactor.note}</div>
   `;
-}
-
-function sampleOuterResponse() {
-  const facing = document.getElementById('mh-facing').value || '北';
-  const timeFactor = getTimeFactor();
-  const fallback = {
-    direction: facing,
-    source: 'manual',
-    note: '定位不可用，已采用你选择的面向方位。',
-  };
-  if (!navigator.geolocation) {
-    outerResponse = { timeFactor, directionFactor: fallback };
-    renderOuterResponse();
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      outerResponse = {
-        timeFactor,
-        directionFactor: {
-          direction: geoDirectionByLatLng(lat, lng),
-          source: 'geolocation',
-          note: `根据粗略经纬度推断方位（lat:${lat.toFixed(2)}, lng:${lng.toFixed(2)}）。`,
-        },
-      };
-      renderOuterResponse();
-    },
-    () => {
-      outerResponse = { timeFactor, directionFactor: fallback };
-      renderOuterResponse();
-    },
-    { enableHighAccuracy: false, timeout: 1600, maximumAge: 600000 }
-  );
 }
 
 function wuxingRelation(tiWuXing, yongWuXing) {
@@ -2017,6 +2073,12 @@ function toast(msg, type = 'info') {
    ───────────────────────────────────────────────────────────────── */
 const pad2  = n => String(n).padStart(2, '0');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// 初始化罗盘默认选中「北」
+(function initCompass() {
+  const defaultBtn = document.querySelector('.dir-btn[data-dir="北"]');
+  if (defaultBtn) defaultBtn.classList.add('active');
+})();
 </script>
 
 </body>
