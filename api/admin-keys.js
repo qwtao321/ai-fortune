@@ -56,12 +56,10 @@ module.exports = async function handler(req, res) {
         return send(res, { code: 0, data: { keys, count, credits } });
       }
       case 'list': {
-        const limit = Math.min(Number(body.limit || 50), 200);
         const rows = await sql`
           SELECT key, credits, note, created_at, updated_at
           FROM user_keys
           ORDER BY created_at DESC
-          LIMIT ${limit}
         `;
         return send(res, { code: 0, data: rows });
       }

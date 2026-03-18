@@ -132,10 +132,6 @@
           <label for="credits">每张积分</label>
           <input id="credits" type="number" min="1" max="999" value="20" />
         </div>
-        <div class="field third">
-          <label for="limit">列表条数</label>
-          <input id="limit" type="number" min="1" max="200" value="50" />
-        </div>
         <div class="field">
           <label for="note">备注</label>
           <textarea id="note" placeholder="例如：首批渠道卡"></textarea>
@@ -237,11 +233,10 @@
       try {
         const secret = ensureSecret();
         setStatus('读取列表中...');
-        const limit = Math.max(1, Math.min(200, Number($('limit').value || 50)));
-        const res = await postAdmin({ secret, action: 'list', limit });
+        const res = await postAdmin({ secret, action: 'list' });
         const rows = Array.isArray(res.data) ? res.data : [];
         $('tbody').innerHTML = rows.map(rowHtml).join('') || '<tr><td colspan="5" class="muted">暂无数据</td></tr>';
-        setStatus(`列表已更新，共 ${rows.length} 条`, 'ok');
+        setStatus(`列表已更新，共 ${rows.length} 条（全量）`, 'ok');
       } catch (e) {
         setStatus('读取失败：' + e.message, 'err');
       }
