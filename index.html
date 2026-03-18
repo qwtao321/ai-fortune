@@ -214,6 +214,17 @@
     }
     .fc-card-body li { list-style: none; padding-left: 1.2em; position: relative; }
     .fc-card-body li::before { content: '▸'; position: absolute; left: 0; color: rgba(196,181,253,.6); }
+    .fc-pivot-block {
+      margin: 10px 0 4px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(251,146,60,.12);
+      border-left: 3px solid #fb923c;
+      color: #fdba74;
+      font-size: 13px;
+      line-height: 1.8;
+      font-weight: 600;
+    }
     .fc-timeline { display: flex; flex-direction: column; gap: 10px; }
     .fc-timeline-item { display: flex; align-items: flex-start; gap: 10px; }
     .fc-year {
@@ -1739,7 +1750,7 @@ async function callFortune(data) {
 
 const SECTION_META = {
   '【原局格局】': { icon: '🔮', color: '#a78bfa' },
-  '【当前大运】': { icon: '🌀', color: '#818cf8' },
+  '【当前大运】': { icon: '🌀', color: '#818cf8', pivot: true },
   '【近三年走势】': { icon: '📅', color: '#60a5fa', timeline: true },
   '【方位建议】': { icon: '🧭', color: '#6ee7b7' },
   '【性格特质】': { icon: '🔮', color: '#a78bfa' },
@@ -1783,7 +1794,7 @@ function cleanBody(text) {
     .join('\n');
 }
 
-function bodyToHtml(text) {
+function bodyToHtml(text, isPivot) {
   let html = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -1791,6 +1802,13 @@ function bodyToHtml(text) {
     .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>');
   if (html.includes('<li>')) html = '<ul>' + html + '</ul>';
   html = html.replace(/<\/li>\n<li>/g, '</li><li>');
+  // 转折点高亮：匹配含"转折"的整句，用橙色卡片突出
+  if (isPivot) {
+    html = html.replace(
+      /(<strong>)?转折点(<\/strong>)?[：:](.*?)(<br\/>|$)/g,
+      `<div class="fc-pivot-block">⚡ 转折点$3</div>`
+    );
+  }
   html = html.replace(/\n/g, '<br/>');
   return html;
 }
@@ -1921,7 +1939,7 @@ function renderFortuneCards(containerId, rawText) {
         <div class="fc-card-title" style="color:${meta.color}">
           <span>${meta.icon}</span><span>${sec.title}</span>
         </div>
-        <div class="fc-card-body">${bodyToHtml(body)}</div>`;
+        <div class="fc-card-body">${bodyToHtml(body, !!meta.pivot)}</div>`;
     }
     el.appendChild(card);
     delay += 120;
