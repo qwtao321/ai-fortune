@@ -42,13 +42,14 @@
     /* ─────────────────────────────────────────────────────────
        CSS 变量 & Reset
        ───────────────────────────────────────────────────────── */
+    /* v2.1 premium redesign */
     :root {
       --gold:    #f5c518;
-      --bg:      #07080f;
-      --purple:  #7c3aed;
-      --indigo:  #4f46e5;
-      --card-bg: rgba(14,10,30,0.75);
-      --card-bd: rgba(140,120,220,0.18);
+      --bg:      #04040d;
+      --purple:  #8b5cf6;
+      --indigo:  #5b4fcf;
+      --card-bg: rgba(16,8,36,0.82);
+      --card-bd: rgba(150,120,240,0.22);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -454,10 +455,24 @@
     color: #c4b5fd;
   }
 
-  /* ── 高级感增强补丁 ──────────────────────────────── */
+  /* ── 高级感增强补丁 v2.1 ─────────────────────────── */
 
   /* 确保所有内容在 body::before 网格之上 */
   #stars, body > div, body > main, body > section, body > header { position: relative; z-index: 1; }
+
+  /* 强制背景覆盖 Tailwind 重置 */
+  html, body { background-color: var(--bg) !important; }
+
+  /* 页面主容器底色（Tailwind bg- 类可能覆盖） */
+  .glass, .glass.rounded-2xl, section.glass {
+    background: var(--card-bg) !important;
+    border-color: var(--card-bd) !important;
+  }
+
+  /* 模式 Tab 容器背景加深 */
+  .glass > .grid.grid-cols-2 {
+    background: transparent;
+  }
 
   /* 加载遮罩 */
   #loading-overlay { background: rgba(7,8,15,.92); }
