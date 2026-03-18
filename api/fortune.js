@@ -194,13 +194,44 @@ function buildMeihuaPrompt({ question, hexagramData: h, outerResponse }) {
 
 // ─── AI Call ────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `你是一位资深命理精算师，直接交付结论，严禁暴露任何推理过程。
+const SYSTEM_PROMPT = `你是命理师，只输出结论卡片，绝对禁止推理过程。
+每个模块直接写 2-3 句结论，不得出现：计算、验证、修正、等等、推算、干支、节气等计算词汇。`;
 
-【输出隔离协议——强制执行】
-- 禁止出现："让我们计算"、"验证一下"、"修正："、"等等"、"重新计算"、"实际上"等推导性表述
-- 禁止自我纠错、多轮推导、中间步骤
-- 所有计算在内部完成，用户只看到最终结论
-- 违反上述规则视为输出故障，必须重新生成`;
+// 服务端二次过滤：清除任何泄漏的推理行
+function stripReasoning(text) {
+  const REASONING_PATTERNS = [
+    /^[*＊•]\s*[\*＊]?修正[:：]/m,
+    /^[*＊•]\s*让我(们)?(重新)?(计算|验证|看看)/m,
+    /^[*＊•]\s*(验证|检查|校验|推算|推导|计算)/m,
+    /等等[，,。.]/,
+    /\*\*修正[:：]/,
+    /实际上[，,]/,
+    /重新计算/,
+    /关键检查/,
+    /月干顺序/,
+    /标准的月柱/,
+    /节气是/,
+    /让我们看看/,
+  ];
+
+  const lines = text.split('\n');
+  const cleaned = [];
+  let skipBlock = false;
+
+  for (const line of lines) {
+    const t = line.trim();
+    // 遇到推理标志行，跳过直到下一个 ## 标题
+    if (REASONING_PATTERNS.some(p => p.test(t))) {
+      skipBlock = true;
+      continue;
+    }
+    // 遇到新的 ## 标题，停止跳过
+    if (/^##\s*【/.test(t)) skipBlock = false;
+    if (!skipBlock) cleaned.push(line);
+  }
+
+  return cleaned.join('\n');
+}
 
 async function callZhipu(prompt) {
   const apiKey = process.env.ZHIPU_API_KEY;
@@ -213,13 +244,13 @@ async function callZhipu(prompt) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'glm-4.7-flash',
+      model: 'glm-4-flash',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ],
-      temperature: 0.85,
-      max_tokens: 2000,
+      temperature: 0.8,
+      max_tokens: 1200,
     }),
   });
 
@@ -230,10 +261,10 @@ async function callZhipu(prompt) {
 
   const json = await resp.json();
   const message = json?.choices?.[0]?.message;
-  const content = (message?.content || message?.reasoning_content || '').trim();
-  if (!content) {
+  const raw = (message?.content || message?.reasoning_content || '').trim();
+  if (!raw) {
     console.error('[callZhipu] 响应结构异常：', JSON.stringify(json));
     throw new Error('智谱 API 返回异常：缺少内容');
   }
-  return content;
+  return stripReasoning(raw);
 }
