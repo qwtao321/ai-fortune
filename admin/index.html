@@ -222,6 +222,7 @@
         <td>${created}</td>
         <td>
           <div class="actions">
+            <button class="secondary" data-act="copy" data-key="${key}">复制</button>
             <button class="secondary" data-act="set" data-key="${key}">改积分</button>
             <button class="danger" data-act="disable" data-key="${key}">禁用</button>
           </div>
@@ -271,6 +272,15 @@
       }
     }
 
+    async function copyKey(key) {
+      try {
+        await navigator.clipboard.writeText(key);
+        setStatus(`已复制：${key}`, 'ok');
+      } catch (e) {
+        setStatus('复制失败，请手动选中密钥文字', 'err');
+      }
+    }
+
     async function setCredit(key) {
       try {
         const secret = ensureSecret();
@@ -308,6 +318,7 @@
       if (!btn) return;
       const act = btn.getAttribute('data-act');
       const key = btn.getAttribute('data-key');
+      if (act === 'copy') copyKey(key);
       if (act === 'disable') disableKey(key);
       if (act === 'set') setCredit(key);
     });
