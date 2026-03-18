@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>密钥管理后台</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.14);
+      --text: #dce4f1;
+      --muted: #97a3b8;
+      --accent: #7b8fb8;
+      --danger: #d35f5f;
+      --ok: #67b37e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC","Microsoft YaHei",sans-serif;
+      background:
+        radial-gradient(ellipse at 10% 0%, rgba(126,156,224,.18), transparent 50%),
+        radial-gradient(ellipse at 90% 100%, rgba(154,129,212,.15), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 24px rgba(0,0,0,.22);
+    }
+    h1 { margin: 0 0 10px; font-size: 26px; letter-spacing: .04em; }
+    .sub { color: var(--muted); margin-bottom: 16px; }
+    .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; }
+    .field { grid-column: span 12; }
+    .field.half { grid-column: span 6; }
+    .field.third { grid-column: span 4; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input:focus, textarea:focus { border-color: rgba(189,205,237,.7); }
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid rgba(194,210,240,.35);
+      background: linear-gradient(135deg, #6f86b0, #576f95);
+      color: #eef4ff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+    }
+    button.danger {
+      background: rgba(211,95,95,.2);
+      border-color: rgba(211,95,95,.45);
+      color: #ffd6d6;
+    }
+    .status { font-size: 13px; margin-top: 8px; color: var(--muted); white-space: pre-wrap; }
+    .status.ok { color: #9ce1b0; }
+    .status.err { color: #ffb7b7; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: left;
+      padding: 10px 6px;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .key { font-family: Consolas, monospace; }
+    .actions { display: flex; gap: 6px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 36px;
+      text-align: center;
+    }
+    .badge-ok   { background: rgba(103,179,126,.18); color: #7ee8a2; border: 1px solid rgba(103,179,126,.4); }
+    .badge-warn { background: rgba(220,160,60,.18);  color: #f5c97a; border: 1px solid rgba(220,160,60,.4); }
+    .badge-zero { background: rgba(211,95,95,.18);   color: #ffb7b7; border: 1px solid rgba(211,95,95,.4); }
+    @media (max-width: 780px) {
+      .field.half, .field.third { grid-column: span 12; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>密钥管理后台</h1>
+    <div class="sub">同域接口：<span class="key">/api/admin-keys</span>，请保管好管理员口令。</div>
+
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label for="secret">管理员口令（ADMIN_SECRET）</label>
+          <input id="secret" type="password" placeholder="请输入管理员口令" />
+        </div>
+        <div class="field third">
+          <label for="count">生成数量</label>
+          <input id="count" type="number" min="1" max="100" value="5" />
+        </div>
+        <div class="field third">
+          <label for="credits">每张积分</label>
+          <input id="credits" type="number" min="1" max="999" value="20" />
+        </div>
+        <div class="field third">
+          <label for="limit">列表条数</label>
+          <input id="limit" type="number" min="1" max="200" value="50" />
+        </div>
+        <div class="field">
+          <label for="note">备注</label>
+          <textarea id="note" placeholder="例如：首批渠道卡"></textarea>
+        </div>
+      </div>
+      <div class="btns" style="margin-top:10px;">
+        <button id="btn-generate">生成密钥</button>
+        <button id="btn-list" class="secondary">刷新列表</button>
+        <button id="btn-save" class="secondary">保存口令到本地</button>
+        <button id="btn-clear" class="danger">清除本地口令</button>
+      </div>
+      <div id="status" class="status">准备就绪</div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="muted">密钥列表（最新在前）</div>
+      <table>
+        <thead>
+          <tr>
+            <th>密钥</th>
+            <th>剩余积分</th>
+            <th>备注</th>
+            <th>创建时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/admin-keys';
+    const LS_KEY = 'ft_admin_secret';
+    const $ = (id) => document.getElementById(id);
+
+    function setStatus(text, type) {
+      const el = $('status');
+      el.textContent = text;
+      el.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    async function postAdmin(payload) {
+      const resp = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await resp.json();
+      if (!resp.ok || json.code !== 0) {
+        throw new Error(json.message || ('请求失败：' + resp.status));
+      }
+      return json;
+    }
+
+    function getSecret() {
+      return $('secret').value.trim();
+    }
+
+    function ensureSecret() {
+      const secret = getSecret();
+      if (!secret) throw new Error('请先输入 ADMIN_SECRET');
+      return secret;
+    }
+
+    function formatDate(v) {
+      if (!v) return '-';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return String(v);
+      return d.toLocaleString('zh-CN');
+    }
+
+    function creditsBadge(credits) {
+      if (credits <= 0)  return `<span class="badge badge-zero">0 已耗尽</span>`;
+      if (credits <= 5)  return `<span class="badge badge-warn">${credits} 偏少</span>`;
+      return `<span class="badge badge-ok">${credits}</span>`;
+    }
+
+    function rowHtml(item) {
+      const key = item.key || '-';
+      const credits = Number(item.credits ?? 0);
+      const note = item.note || '';
+      const created = formatDate(item.created_at);
+      return `<tr>
+        <td class="key">${key}</td>
+        <td>${creditsBadge(credits)}</td>
+        <td>${note}</td>
+        <td>${created}</td>
+        <td>
+          <div class="actions">
+            <button class="secondary" data-act="set" data-key="${key}">改积分</button>
+            <button class="danger" data-act="disable" data-key="${key}">禁用</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    async function refreshList() {
+      try {
+        const secret = ensureSecret();
+        setStatus('读取列表中...');
+        const limit = Math.max(1, Math.min(200, Number($('limit').value || 50)));
+        const res = await postAdmin({ secret, action: 'list', limit });
+        const rows = Array.isArray(res.data) ? res.data : [];
+        $('tbody').innerHTML = rows.map(rowHtml).join('') || '<tr><td colspan="5" class="muted">暂无数据</td></tr>';
+        setStatus(`列表已更新，共 ${rows.length} 条`, 'ok');
+      } catch (e) {
+        setStatus('读取失败：' + e.message, 'err');
+      }
+    }
+
+    async function generateKeys() {
+      try {
+        const secret = ensureSecret();
+        const count = Math.max(1, Math.min(100, Number($('count').value || 1)));
+        const credits = Math.max(1, Math.min(999, Number($('credits').value || 10)));
+        const note = $('note').value.trim();
+        setStatus('生成中...');
+        const res = await postAdmin({ secret, action: 'generate', count, credits, note });
+        const keys = (res.data && res.data.keys) ? res.data.keys : [];
+        setStatus(`生成成功：${keys.length} 张\n${keys.join('\n')}`, 'ok');
+        await refreshList();
+      } catch (e) {
+        setStatus('生成失败：' + e.message, 'err');
+      }
+    }
+
+    async function disableKey(key) {
+      try {
+        const secret = ensureSecret();
+        if (!confirm(`确定禁用密钥 ${key} ?`)) return;
+        setStatus(`禁用中：${key}...`);
+        await postAdmin({ secret, action: 'disable', key });
+        setStatus(`已禁用：${key}`, 'ok');
+        await refreshList();
+      } catch (e) {
+        setStatus('禁用失败：' + e.message, 'err');
+      }
+    }
+
+    async function setCredit(key) {
+      try {
+        const secret = ensureSecret();
+        const val = prompt(`为 ${key} 设置新积分：`, '10');
+        if (val === null) return;
+        const credits = Number(val);
+        if (!Number.isFinite(credits) || credits < 0) {
+          throw new Error('积分必须是大于等于 0 的数字');
+        }
+        setStatus(`更新积分中：${key} -> ${credits}...`);
+        await postAdmin({ secret, action: 'setCredit', key, credits });
+        setStatus(`已更新：${key} -> ${credits}`, 'ok');
+        await refreshList();
+      } catch (e) {
+        setStatus('更新失败：' + e.message, 'err');
+      }
+    }
+
+    $('btn-generate').addEventListener('click', generateKeys);
+    $('btn-list').addEventListener('click', refreshList);
+    $('btn-save').addEventListener('click', () => {
+      const secret = $('secret').value.trim();
+      if (!secret) return setStatus('口令为空，无法保存', 'err');
+      localStorage.setItem(LS_KEY, secret);
+      setStatus('口令已保存到本地浏览器', 'ok');
+    });
+    $('btn-clear').addEventListener('click', () => {
+      localStorage.removeItem(LS_KEY);
+      $('secret').value = '';
+      setStatus('已清除本地口令', 'ok');
+    });
+
+    $('tbody').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const act = btn.getAttribute('data-act');
+      const key = btn.getAttribute('data-key');
+      if (act === 'disable') disableKey(key);
+      if (act === 'set') setCredit(key);
+    });
+
+    (function init() {
+      const secret = localStorage.getItem(LS_KEY);
+      if (secret) $('secret').value = secret;
+      setStatus('准备就绪');
+    })();
+  </script>
+</body>
+</html>
