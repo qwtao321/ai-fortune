@@ -26,11 +26,7 @@
       color: var(--text);
       min-height: 100vh;
     }
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 28px 16px 48px;
-    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -69,21 +65,12 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    button.secondary {
-      background: rgba(255,255,255,.06);
-      color: var(--text);
-    }
-    button.danger {
-      background: rgba(211,95,95,.2);
-      border-color: rgba(211,95,95,.45);
-      color: #ffd6d6;
-    }
-    button:disabled {
-      opacity: .4;
-      cursor: not-allowed;
-    }
+    button.secondary { background: rgba(255,255,255,.06); color: var(--text); }
+    button.danger { background: rgba(211,95,95,.2); border-color: rgba(211,95,95,.45); color: #ffd6d6; }
+    button.active { background: rgba(111,134,176,.3); border-color: rgba(111,134,176,.7); color: #c8d9f5; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
     .status { font-size: 13px; margin-top: 8px; color: var(--muted); white-space: pre-wrap; }
-    .status.ok { color: #9ce1b0; }
+    .status.ok  { color: #9ce1b0; }
     .status.err { color: #ffb7b7; }
 
     /* ── 批量工具栏 ── */
@@ -99,21 +86,11 @@
       flex-wrap: wrap;
     }
     #batch-bar.visible { display: flex; }
-    #batch-count {
-      font-size: 13px;
-      color: #a8bfdf;
-      margin-right: 4px;
-      white-space: nowrap;
-    }
+    #batch-count { font-size: 13px; color: #a8bfdf; margin-right: 4px; white-space: nowrap; }
     #batch-bar button { padding: 7px 12px; font-size: 13px; }
 
     /* ── 表格 ── */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-      font-size: 13px;
-    }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
     th, td {
       border-bottom: 1px solid rgba(255,255,255,.08);
       text-align: left;
@@ -123,27 +100,18 @@
     th { color: var(--muted); font-weight: 600; }
     th.cb-col, td.cb-col { width: 36px; text-align: center; padding: 10px 4px; }
 
-    /* 复选框样式 */
     input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       accent-color: #7b8fb8;
-      cursor: pointer;
-      padding: 0;
-      border-radius: 4px;
+      cursor: pointer; padding: 0; border-radius: 4px;
     }
 
     .key { font-family: Consolas, monospace; }
     .actions { display: flex; gap: 6px; }
     .muted { color: var(--muted); font-size: 12px; }
     .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-      min-width: 36px;
-      text-align: center;
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 13px; font-weight: 700; min-width: 36px; text-align: center;
     }
     .badge-ok   { background: rgba(103,179,126,.18); color: #7ee8a2; border: 1px solid rgba(103,179,126,.4); }
     .badge-warn { background: rgba(220,160,60,.18);  color: #f5c97a; border: 1px solid rgba(220,160,60,.4); }
@@ -152,8 +120,43 @@
     /* 行选中高亮 */
     tr.selected td { background: rgba(111,134,176,.1); }
 
+    /* ── 分组表头行 ── */
+    tr.group-header td {
+      background: rgba(111,134,176,.1);
+      border-top: 1px solid rgba(111,134,176,.25);
+      border-bottom: 1px solid rgba(111,134,176,.18);
+      padding: 8px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    tr.group-header td:hover { background: rgba(111,134,176,.18); }
+    .group-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: #a8bfdf;
+    }
+    .group-arrow {
+      display: inline-block; font-size: 10px; color: var(--muted);
+      transition: transform .2s; width: 12px;
+    }
+    .group-arrow.collapsed { transform: rotate(-90deg); }
+    .group-count {
+      display: inline-block; padding: 1px 8px; border-radius: 12px;
+      font-size: 11px; font-weight: 600; background: rgba(111,134,176,.2);
+      color: #a8bfdf; border: 1px solid rgba(111,134,176,.3);
+    }
+    .group-stats {
+      margin-left: auto; font-size: 11px; color: var(--muted);
+      display: flex; gap: 10px;
+    }
+    .group-stats span { white-space: nowrap; }
+    /* 分组内数据行缩进 */
+    tr.group-row td:nth-child(2) { padding-left: 18px; }
+    /* 分组行隐藏 */
+    tr.group-row.hidden { display: none; }
+
     @media (max-width: 780px) {
       .field.half, .field.third { grid-column: span 12; }
+      .group-stats { display: none; }
     }
   </style>
 </head>
@@ -191,13 +194,17 @@
     </div>
 
     <div class="card" style="margin-top:14px;">
+      <!-- 工具栏 -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div class="muted">密钥列表（最新在前）</div>
-        <div style="font-size:12px;color:var(--muted);">
-          勾选行后可批量操作 &nbsp;·&nbsp;
-          <a href="#" id="link-select-all" style="color:#a8bfdf;text-decoration:none;">全选</a>
-          &nbsp;/&nbsp;
-          <a href="#" id="link-deselect-all" style="color:#a8bfdf;text-decoration:none;">取消全选</a>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button id="btn-group" class="secondary" style="padding:6px 12px;font-size:12px;">按备注分组</button>
+          <div style="font-size:12px;color:var(--muted);">
+            勾选行后可批量操作 &nbsp;·&nbsp;
+            <a href="#" id="link-select-all" style="color:#a8bfdf;text-decoration:none;">全选</a>
+            &nbsp;/&nbsp;
+            <a href="#" id="link-deselect-all" style="color:#a8bfdf;text-decoration:none;">取消全选</a>
+          </div>
         </div>
       </div>
 
@@ -226,9 +233,12 @@
   </div>
 
   <script>
-    const API = '/api/admin-keys';
+    const API    = '/api/admin-keys';
     const LS_KEY = 'ft_admin_secret';
-    const $ = (id) => document.getElementById(id);
+    const $      = (id) => document.getElementById(id);
+
+    let allRows   = [];      // 原始数据
+    let groupMode = false;   // 是否分组模式
 
     /* ── 状态 ── */
     function setStatus(text, type) {
@@ -245,9 +255,7 @@
         body: JSON.stringify(payload),
       });
       const json = await resp.json();
-      if (!resp.ok || json.code !== 0) {
-        throw new Error(json.message || ('请求失败：' + resp.status));
-      }
+      if (!resp.ok || json.code !== 0) throw new Error(json.message || ('请求失败：' + resp.status));
       return json;
     }
 
@@ -261,23 +269,22 @@
     function formatDate(v) {
       if (!v) return '-';
       const d = new Date(v);
-      if (Number.isNaN(d.getTime())) return String(v);
-      return d.toLocaleString('zh-CN');
+      return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString('zh-CN');
     }
 
     function creditsBadge(credits) {
-      if (credits <= 0)  return `<span class="badge badge-zero">0 已耗尽</span>`;
-      if (credits <= 5)  return `<span class="badge badge-warn">${credits} 偏少</span>`;
+      if (credits <= 0) return `<span class="badge badge-zero">0 已耗尽</span>`;
+      if (credits <= 5) return `<span class="badge badge-warn">${credits} 偏少</span>`;
       return `<span class="badge badge-ok">${credits}</span>`;
     }
 
-    /* ── 渲染行 ── */
-    function rowHtml(item) {
-      const key = item.key || '-';
+    /* ── 单行 HTML ── */
+    function rowHtml(item, extraClass = '') {
+      const key     = item.key || '-';
       const credits = Number(item.credits ?? 0);
-      const note = item.note || '';
+      const note    = item.note || '';
       const created = formatDate(item.created_at);
-      return `<tr data-key="${key}">
+      return `<tr data-key="${key}" class="${extraClass}">
         <td class="cb-col"><input type="checkbox" class="row-chk" data-key="${key}" /></td>
         <td class="key">${key}</td>
         <td>${creditsBadge(credits)}</td>
@@ -285,12 +292,72 @@
         <td>${created}</td>
         <td>
           <div class="actions">
-            <button class="secondary" data-act="copy" data-key="${key}">复制</button>
-            <button class="secondary" data-act="set" data-key="${key}">改积分</button>
-            <button class="danger" data-act="disable" data-key="${key}">禁用</button>
+            <button class="secondary" data-act="copy"    data-key="${key}">复制</button>
+            <button class="secondary" data-act="set"     data-key="${key}">改积分</button>
+            <button class="danger"    data-act="disable" data-key="${key}">禁用</button>
           </div>
         </td>
       </tr>`;
+    }
+
+    /* ── 分组渲染 ── */
+    function groupBy(rows) {
+      const map = new Map();
+      rows.forEach(item => {
+        const key = (item.note || '').trim() || '（无备注）';
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(item);
+      });
+      // 排序：有备注的按字母，无备注放最后
+      return [...map.entries()].sort(([a], [b]) => {
+        if (a === '（无备注）') return 1;
+        if (b === '（无备注）') return -1;
+        return a.localeCompare(b, 'zh-CN');
+      });
+    }
+
+    function renderGrouped(rows) {
+      const groups = groupBy(rows);
+      let html = '';
+      groups.forEach(([label, items], idx) => {
+        const groupId   = 'grp-' + idx;
+        const total     = items.length;
+        const available = items.filter(i => Number(i.credits) > 0).length;
+        const exhausted = total - available;
+        html += `<tr class="group-header" data-group="${groupId}">
+          <td colspan="6">
+            <div class="group-label">
+              <span class="group-arrow" id="arrow-${groupId}">▼</span>
+              <span>${label}</span>
+              <span class="group-count">${total} 张</span>
+              <div class="group-stats">
+                <span style="color:#7ee8a2;">可用 ${available}</span>
+                ${exhausted > 0 ? `<span style="color:#ffb7b7;">耗尽 ${exhausted}</span>` : ''}
+              </div>
+            </div>
+          </td>
+        </tr>`;
+        items.forEach(item => {
+          html += rowHtml(item, `group-row grp-${groupId}`);
+        });
+      });
+      $('tbody').innerHTML = html || '<tr><td colspan="6" class="muted">暂无数据</td></tr>';
+    }
+
+    /* ── 平铺渲染 ── */
+    function renderFlat(rows) {
+      $('tbody').innerHTML = rows.map(item => rowHtml(item)).join('') ||
+        '<tr><td colspan="6" class="muted">暂无数据</td></tr>';
+    }
+
+    /* ── 统一渲染入口 ── */
+    function renderTable(rows) {
+      if (groupMode) {
+        renderGrouped(rows);
+      } else {
+        renderFlat(rows);
+      }
+      updateBatchBar();
     }
 
     /* ── 选中管理 ── */
@@ -300,36 +367,38 @@
 
     function updateBatchBar() {
       const keys = getCheckedKeys();
-      const bar = $('batch-bar');
-      if (keys.length > 0) {
-        bar.classList.add('visible');
-        $('batch-count').textContent = `已选 ${keys.length} 条`;
-      } else {
-        bar.classList.remove('visible');
-      }
-      // 全选框状态同步
+      $('batch-bar').classList.toggle('visible', keys.length > 0);
+      if (keys.length) $('batch-count').textContent = `已选 ${keys.length} 条`;
       const allChks = document.querySelectorAll('.row-chk');
-      $('chk-all').checked = allChks.length > 0 && keys.length === allChks.length;
+      const visible = [...allChks].filter(el => !el.closest('tr').classList.contains('hidden'));
+      $('chk-all').checked       = visible.length > 0 && keys.length === allChks.length;
       $('chk-all').indeterminate = keys.length > 0 && keys.length < allChks.length;
     }
 
     function updateRowHighlight() {
-      document.querySelectorAll('#tbody tr').forEach(tr => {
+      document.querySelectorAll('#tbody tr[data-key]').forEach(tr => {
         const chk = tr.querySelector('.row-chk');
-        tr.classList.toggle('selected', chk && chk.checked);
+        tr.classList.toggle('selected', !!(chk && chk.checked));
       });
     }
 
-    /* ── 列表 ── */
+    /* ── 分组折叠 ── */
+    function toggleGroup(groupId) {
+      const rows  = document.querySelectorAll(`tr.grp-${groupId}`);
+      const arrow = document.getElementById(`arrow-${groupId}`);
+      const collapsed = arrow.classList.toggle('collapsed');
+      rows.forEach(tr => tr.classList.toggle('hidden', collapsed));
+    }
+
+    /* ── 列表刷新 ── */
     async function refreshList() {
       try {
         const secret = ensureSecret();
         setStatus('读取列表中...');
         const res = await postAdmin({ secret, action: 'list' });
-        const rows = Array.isArray(res.data) ? res.data : [];
-        $('tbody').innerHTML = rows.map(rowHtml).join('') || '<tr><td colspan="6" class="muted">暂无数据</td></tr>';
-        updateBatchBar();
-        setStatus(`列表已更新，共 ${rows.length} 条（全量）`, 'ok');
+        allRows = Array.isArray(res.data) ? res.data : [];
+        renderTable(allRows);
+        setStatus(`列表已更新，共 ${allRows.length} 条（全量）`, 'ok');
       } catch (e) {
         setStatus('读取失败：' + e.message, 'err');
       }
@@ -338,13 +407,13 @@
     /* ── 生成 ── */
     async function generateKeys() {
       try {
-        const secret = ensureSecret();
-        const count = Math.max(1, Math.min(100, Number($('count').value || 1)));
+        const secret  = ensureSecret();
+        const count   = Math.max(1, Math.min(100, Number($('count').value || 1)));
         const credits = Math.max(1, Math.min(999, Number($('credits').value || 10)));
-        const note = $('note').value.trim();
+        const note    = $('note').value.trim();
         setStatus('生成中...');
-        const res = await postAdmin({ secret, action: 'generate', count, credits, note });
-        const keys = (res.data && res.data.keys) ? res.data.keys : [];
+        const res  = await postAdmin({ secret, action: 'generate', count, credits, note });
+        const keys = res.data?.keys || [];
         setStatus(`生成成功：${keys.length} 张\n${keys.join('\n')}`, 'ok');
         await refreshList();
       } catch (e) {
@@ -436,6 +505,15 @@
       }
     }
 
+    /* ── 分组模式切换 ── */
+    function toggleGroupMode() {
+      groupMode = !groupMode;
+      const btn = $('btn-group');
+      btn.classList.toggle('active', groupMode);
+      btn.textContent = groupMode ? '取消分组' : '按备注分组';
+      renderTable(allRows);
+    }
+
     /* ── 事件绑定 ── */
     $('btn-generate').addEventListener('click', generateKeys);
     $('btn-list').addEventListener('click', refreshList);
@@ -450,8 +528,7 @@
       $('secret').value = '';
       setStatus('已清除本地口令', 'ok');
     });
-
-    // 批量按钮
+    $('btn-group').addEventListener('click', toggleGroupMode);
     $('btn-batch-copy').addEventListener('click', batchCopy);
     $('btn-batch-disable').addEventListener('click', batchDisable);
     $('btn-batch-credits').addEventListener('click', batchSetCredit);
@@ -459,27 +536,36 @@
     // 全选复选框
     $('chk-all').addEventListener('change', () => {
       const checked = $('chk-all').checked;
-      document.querySelectorAll('.row-chk').forEach(el => { el.checked = checked; });
+      document.querySelectorAll('.row-chk').forEach(el => {
+        if (!el.closest('tr').classList.contains('hidden')) el.checked = checked;
+      });
       updateRowHighlight();
       updateBatchBar();
     });
 
-    // 快捷链接全选/取消
+    // 全选 / 取消 快捷链接
     $('link-select-all').addEventListener('click', (e) => {
       e.preventDefault();
-      document.querySelectorAll('.row-chk').forEach(el => { el.checked = true; });
-      updateRowHighlight();
-      updateBatchBar();
+      document.querySelectorAll('.row-chk').forEach(el => {
+        if (!el.closest('tr').classList.contains('hidden')) el.checked = true;
+      });
+      updateRowHighlight(); updateBatchBar();
     });
     $('link-deselect-all').addEventListener('click', (e) => {
       e.preventDefault();
       document.querySelectorAll('.row-chk').forEach(el => { el.checked = false; });
-      updateRowHighlight();
-      updateBatchBar();
+      updateRowHighlight(); updateBatchBar();
     });
 
-    // 行内单条操作 + 行复选框
+    // tbody 事件委托
     $('tbody').addEventListener('click', (e) => {
+      // 分组折叠
+      const groupTr = e.target.closest('tr.group-header');
+      if (groupTr) {
+        toggleGroup(groupTr.dataset.group);
+        return;
+      }
+      // 单条操作按钮
       const btn = e.target.closest('button[data-act]');
       if (btn) {
         const act = btn.getAttribute('data-act');
@@ -489,9 +575,8 @@
         if (act === 'set')     setCredit(key);
         return;
       }
-      // 点击复选框或整行
-      const chk = e.target.closest('.row-chk');
-      if (chk) {
+      // 行复选框
+      if (e.target.classList.contains('row-chk')) {
         updateRowHighlight();
         updateBatchBar();
       }
