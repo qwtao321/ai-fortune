@@ -118,10 +118,10 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function buildPrompt({ name, gender, baziInfo: b }) {
-  return `你是一位精通中西命理、玄学与心理学的智者，说话幽默睿智且充满人格魅力。
+// ─── Prompts ────────────────────────────────────────────────────────────────
 
-为命主「${name}」（${gender}）进行八字命理分析。
+function buildPrompt({ name, gender, baziInfo: b }) {
+  return `为命主「${name}」（${gender}）进行八字命理分析。
 
 【四柱八字】
 年柱：${b.yearGan}${b.yearZhi}（${b.yearNaYin}·${b.yearWuXing}）
@@ -130,18 +130,18 @@ function buildPrompt({ name, gender, baziInfo: b }) {
 时柱：${b.timeGan}${b.timeZhi}（${b.timeNaYin}·${b.timeWuXing}）
 农历：${b.lunarYear}${b.lunarMonth}${b.lunarDay}
 
-请依次分析以下四个维度，每项 2-3 句，语气像对老朋友说话，不要用"根据八字"开场：
+直接按以下四个模块输出结论，每项 2-3 句，语气像对老朋友说话，不要用"根据八字"开场，禁止出现任何推理过程：
 
-【性格特质】
+## 【性格特质】
 
-【事业走向】
+## 【事业走向】
 
-【感情缘分】
+## 【感情缘分】
 
-【健康提示】
+## 【健康提示】
 
-最后，用一句七言押韵签文收尾，格式如：
-【签文】XXXX，XXXX。`;
+## 【签文】
+用一句七言押韵签文收尾，格式：XXXX，XXXX。`;
 }
 
 function guaMetaFromCode(code, fallbackName) {
@@ -171,11 +171,9 @@ function buildMeihuaPrompt({ question, hexagramData: h, outerResponse }) {
   const ctx = buildMeihuaBackgroundContext(h);
   const timeFactor = outerResponse?.timeFactor || {};
   const dirFactor = outerResponse?.directionFactor || {};
-  return `你现在扮演一位“犀利的战略咨询师兼梅花易数专家”。请直接给结论，不说空话。
+  return `用户问题：${question}
 
-用户问题：${question}
-
-【结构化背景（用于推理，不要照抄）】
+【易数背景数据——仅供内部推理，禁止将以下原始数据照抄输出】
 - 本卦：${ctx.ben.name}（编码:${h.benGuaCode}）｜卦辞：${ctx.ben.guaci}
 - 互卦：${ctx.hu.name}（编码:${h.huGuaCode}）｜卦辞：${ctx.hu.guaci}
 - 变卦：${ctx.bian.name}（编码:${h.bianGuaCode}）｜卦辞：${ctx.bian.guaci}
@@ -187,20 +185,30 @@ function buildMeihuaPrompt({ question, hexagramData: h, outerResponse }) {
 - 外应时间：农历${timeFactor.lunarMonthDay || '未知'}，${timeFactor.hourZhi || '未知'}时，季节旺衰${timeFactor.seasonWuxing || '未知'}
 - 外应方位：${dirFactor.direction || '未知'}（${dirFactor.source || '未知来源'}）
 
-你现在的身份是解卦专家。我已为你提供了完整的易数三境（本卦、互卦、变卦）和外应信息。
-请严格使用 Markdown 输出，并严格按以下四段标题（原样输出）：
+禁止输出任何推理过程，直接按以下四段结构输出最终结论：
+
 ## 【卦象解码】
-简述本卦（现状）、互卦（过程）、变卦（未来）含义，必须引用上面卦辞关键词。
+直接给出现状、中期、走向三句断言，必须引用卦辞关键词。
 
 ## 【外应分析】
-结合当前时间与方位分析五行能量增益或损耗，并明确指出“贵人属性”和“阻力属性”。
+直接点明贵人属性与阻力属性，给出一句具体行动建议。
 
 ## 【过程推演】
-利用互卦剖析中期隐藏变化，至少列出 2 条具体干扰。
+列出 2 条中期隐藏变化的具体预警，每条一句话。
 
 ## 【结局定断】
-根据变卦给出最终走向，并给出 3 条像 PM 处理 Bug 一样具体的行动建议（每条都要有：触发条件、动作、预期反馈）。`;
+给出最终走向判断，附 3 条行动建议（格式：触发条件 → 动作 → 预期反馈）。`;
 }
+
+// ─── AI Call ────────────────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT = `你是一位资深命理精算师，直接交付结论，严禁暴露任何推理过程。
+
+【输出隔离协议——强制执行】
+- 禁止出现："让我们计算"、"验证一下"、"修正："、"等等"、"重新计算"、"实际上"等推导性表述
+- 禁止自我纠错、多轮推导、中间步骤
+- 所有计算在内部完成，用户只看到最终结论
+- 违反上述规则视为输出故障，必须重新生成`;
 
 async function callZhipu(prompt) {
   const apiKey = process.env.ZHIPU_API_KEY;
@@ -214,7 +222,10 @@ async function callZhipu(prompt) {
     },
     body: JSON.stringify({
       model: 'glm-4.7-flash',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
+      ],
       temperature: 0.85,
       max_tokens: 800,
     }),
@@ -227,7 +238,6 @@ async function callZhipu(prompt) {
 
   const json = await resp.json();
   const message = json?.choices?.[0]?.message;
-  // glm-4.7-flash 思考模型：content 可能为空，实际内容在 reasoning_content 或 content 里
   const content = (message?.content || message?.reasoning_content || '').trim();
   if (!content) {
     console.error('[callZhipu] 响应结构异常：', JSON.stringify(json));
