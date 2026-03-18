@@ -226,7 +226,12 @@ async function callZhipu(prompt) {
   }
 
   const json = await resp.json();
-  const content = json?.choices?.[0]?.message?.content?.trim();
-  if (!content) throw new Error('智谱 API 返回异常：缺少内容');
+  const message = json?.choices?.[0]?.message;
+  // glm-4.7-flash 思考模型：content 可能为空，实际内容在 reasoning_content 或 content 里
+  const content = (message?.content || message?.reasoning_content || '').trim();
+  if (!content) {
+    console.error('[callZhipu] 响应结构异常：', JSON.stringify(json));
+    throw new Error('智谱 API 返回异常：缺少内容');
+  }
   return content;
 }
