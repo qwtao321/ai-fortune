@@ -121,27 +121,27 @@ module.exports = async function handler(req, res) {
 // ─── Prompts ────────────────────────────────────────────────────────────────
 
 function buildPrompt({ name, gender, baziInfo: b }) {
-  return `为命主「${name}」（${gender}）进行八字命理分析。
-
-【四柱八字】
-年柱：${b.yearGan}${b.yearZhi}（${b.yearNaYin}·${b.yearWuXing}）
-月柱：${b.monthGan}${b.monthZhi}（${b.monthNaYin}·${b.monthWuXing}）
-日柱：${b.dayGan}${b.dayZhi}（${b.dayNaYin}·${b.dayWuXing}）
-时柱：${b.timeGan}${b.timeZhi}（${b.timeNaYin}·${b.timeWuXing}）
+  return `命主：${name}，${gender}
+四柱：${b.yearGan}${b.yearZhi} ${b.monthGan}${b.monthZhi} ${b.dayGan}${b.dayZhi} ${b.timeGan}${b.timeZhi}
+纳音：${b.yearNaYin} / ${b.monthNaYin} / ${b.dayNaYin} / ${b.timeNaYin}
 农历：${b.lunarYear}${b.lunarMonth}${b.lunarDay}
 
-直接按以下四个模块输出结论，每项 2-3 句，语气像对老朋友说话，不要用"根据八字"开场，禁止出现任何推理过程：
+请用老友聊天的语气，依次输出以下四段，每段 2-3 句实质性结论，不要引用格式说明：
 
 ## 【性格特质】
+（写命主真实的性格）
 
 ## 【事业走向】
+（写命主事业的具体特征与建议）
 
 ## 【感情缘分】
+（写感情运势与建议）
 
 ## 【健康提示】
+（写需要注意的健康方向）
 
 ## 【签文】
-用一句七言押韵签文收尾，格式：XXXX，XXXX。`;
+（一句七言押韵，格式：XXXX，XXXX。）`;
 }
 
 function guaMetaFromCode(code, fallbackName) {
@@ -171,33 +171,25 @@ function buildMeihuaPrompt({ question, hexagramData: h, outerResponse }) {
   const ctx = buildMeihuaBackgroundContext(h);
   const timeFactor = outerResponse?.timeFactor || {};
   const dirFactor = outerResponse?.directionFactor || {};
-  return `用户问题：${question}
+  return `问题：${question}
 
-【易数背景数据——仅供内部推理，禁止将以下原始数据照抄输出】
-- 本卦：${ctx.ben.name}（编码:${h.benGuaCode}）｜卦辞：${ctx.ben.guaci}
-- 互卦：${ctx.hu.name}（编码:${h.huGuaCode}）｜卦辞：${ctx.hu.guaci}
-- 变卦：${ctx.bian.name}（编码:${h.bianGuaCode}）｜卦辞：${ctx.bian.guaci}
-- 动爻：第 ${h.movingLine || '-'} 爻
-- ${ctx.elementLine}
-- 生克结论：${ctx.relationInfo.status}
-- 生克断语：${ctx.relationInfo.desc}
-- 气场建议：${ctx.relationInfo.vibe}
-- 外应时间：农历${timeFactor.lunarMonthDay || '未知'}，${timeFactor.hourZhi || '未知'}时，季节旺衰${timeFactor.seasonWuxing || '未知'}
-- 外应方位：${dirFactor.direction || '未知'}（${dirFactor.source || '未知来源'}）
+卦象：本卦${ctx.ben.name}，互卦${ctx.hu.name}，变卦${ctx.bian.name}，动爻第${h.movingLine || '-'}爻
+体用：${ctx.elementLine}，${ctx.relationInfo.status}，${ctx.relationInfo.desc}
+外应：农历${timeFactor.lunarMonthDay || '未知'} ${timeFactor.hourZhi || '未知'}时，方位${dirFactor.direction || '未知'}
 
-禁止输出任何推理过程，直接按以下四段结构输出最终结论：
+请作为梅花易数专家，直接输出以下四段结论，每段内容具体、犀利：
 
 ## 【卦象解码】
-直接给出现状、中期、走向三句断言，必须引用卦辞关键词。
+（用本卦说现状，互卦说过程，变卦说走向，各一句，引用卦辞原文关键词）
 
 ## 【外应分析】
-直接点明贵人属性与阻力属性，给出一句具体行动建议。
+（说明贵人五行属性、阻力属性，给一句具体行动建议）
 
 ## 【过程推演】
-列出 2 条中期隐藏变化的具体预警，每条一句话。
+（列2条中期具体预警，每条一句话，直接说会发生什么）
 
 ## 【结局定断】
-给出最终走向判断，附 3 条行动建议（格式：触发条件 → 动作 → 预期反馈）。`;
+（最终走向一句判断，然后3条行动：触发条件 → 你的动作 → 预期结果）`;
 }
 
 // ─── AI Call ────────────────────────────────────────────────────────────────
@@ -227,7 +219,7 @@ async function callZhipu(prompt) {
         { role: 'user', content: prompt },
       ],
       temperature: 0.85,
-      max_tokens: 800,
+      max_tokens: 2000,
     }),
   });
 

@@ -187,11 +187,45 @@
     /* ─────────────────────────────────────────────────────────
        结果文字
        ───────────────────────────────────────────────────────── */
-    #result-text {
-      line-height: 2.25;
-      letter-spacing: .045em;
+    #result-text { display: flex; flex-direction: column; gap: 10px; }
+    .fc-card {
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      animation: fadeSlideIn .35s ease both;
+    }
+    .fc-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .fc-card-body {
+      font-size: 13.5px;
+      line-height: 1.9;
+      color: rgba(226,226,240,.88);
       white-space: pre-wrap;
-      word-break: break-all;
+    }
+    .fc-card-body li { list-style: none; padding-left: 1.2em; position: relative; }
+    .fc-card-body li::before { content: '▸'; position: absolute; left: 0; color: rgba(196,181,253,.6); }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fc-seal {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(245,197,24,.1), rgba(124,93,250,.1));
+      border: 1px solid rgba(245,197,24,.3);
+      border-radius: 14px;
+      color: #fde68a;
+      animation: fadeSlideIn .35s ease both;
     }
 
     /* ─────────────────────────────────────────────────────────
@@ -1639,16 +1673,93 @@ async function callFortune(data) {
 /* ─────────────────────────────────────────────────────────────────
    打字机逐字渲染（每 25ms 一字）
    ───────────────────────────────────────────────────────────────── */
+// ─── Fortune Result Card Renderer ───────────────────────────────────────────
+
+const SECTION_META = {
+  '【性格特质】': { icon: '🔮', color: '#a78bfa' },
+  '【事业走向】': { icon: '🏔️', color: '#60a5fa' },
+  '【感情缘分】': { icon: '🌸', color: '#f9a8d4' },
+  '【健康提示】': { icon: '🍃', color: '#6ee7b7' },
+  '【签文】':    { icon: '📜', color: '#fde68a', seal: true },
+  '【卦象解码】': { icon: '☯️', color: '#a78bfa' },
+  '【外应分析】': { icon: '🧭', color: '#60a5fa' },
+  '【过程推演】': { icon: '🔀', color: '#fb923c' },
+  '【结局定断】': { icon: '⚡', color: '#fde68a' },
+};
+
+function parseFortuneText(text) {
+  const sections = [];
+  const parts = text.split(/^##\s*/m).filter(Boolean);
+  for (const part of parts) {
+    const lbStart = part.indexOf('【');
+    const lbEnd = part.indexOf('】');
+    if (lbStart < 0 || lbEnd < 0) { sections.push({ title: '', body: part.trim() }); continue; }
+    const title = '【' + part.slice(lbStart + 1, lbEnd) + '】';
+    const body = part.slice(lbEnd + 1).trim();
+    if (body) sections.push({ title, body });
+  }
+  if (!sections.length) sections.push({ title: '【命理解读】', body: text.trim() });
+  return sections;
+}
+
+function cleanBody(text) {
+  return text
+    .split('\n')
+    .filter(line => {
+      const t = line.trim();
+      if (!t) return false;
+      // 过滤掉格式说明行：纯括号包裹的说明文字
+      if (/^[（(].*[）)]$/.test(t)) return false;
+      // 过滤序号残留
+      if (/^\d+\.$/.test(t)) return false;
+      return true;
+    })
+    .join('\n');
+}
+
+function bodyToHtml(text) {
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/→/g, '<span style="color:rgba(196,181,253,.7)">→</span>')
+    .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>');
+  if (html.includes('<li>')) html = '<ul>' + html + '</ul>';
+  html = html.replace(/<\/li>\n<li>/g, '</li><li>');
+  html = html.replace(/\n/g, '<br/>');
+  return html;
+}
+
+function renderFortuneCards(containerId, rawText) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const sections = parseFortuneText(rawText);
+  let delay = 0;
+  for (const sec of sections) {
+    const meta = SECTION_META[sec.title] || { icon: '✦', color: '#a78bfa' };
+    const body = cleanBody(sec.body);
+    if (!body) continue;
+    const card = document.createElement('div');
+    if (meta.seal) {
+      card.className = 'fc-seal';
+      card.style.animationDelay = delay + 'ms';
+      card.innerHTML = `${meta.icon} ${body.replace(/\n/g, '　')}`;
+    } else {
+      card.className = 'fc-card';
+      card.style.animationDelay = delay + 'ms';
+      card.innerHTML = `
+        <div class="fc-card-title" style="color:${meta.color}">
+          <span>${meta.icon}</span><span>${sec.title}</span>
+        </div>
+        <div class="fc-card-body">${bodyToHtml(body)}</div>`;
+    }
+    el.appendChild(card);
+    delay += 120;
+  }
+}
+
 function typewriter(id, text) {
-  return new Promise(resolve => {
-    const el = document.getElementById(id);
-    el.textContent = '';
-    let i = 0;
-    const iv = setInterval(() => {
-      if (i >= text.length) { clearInterval(iv); resolve(); return; }
-      el.textContent += text[i++];
-    }, 25);
-  });
+  renderFortuneCards(id, text);
+  return Promise.resolve();
 }
 
 function parseMeihuaSections(text) {
@@ -1695,27 +1806,7 @@ async function typewriterElement(el, text, speed = 16) {
 }
 
 async function stagedRenderMeihua(id, text) {
-  const root = document.getElementById(id);
-  root.innerHTML = '';
-  const sections = parseMeihuaSections(text);
-  for (const sec of sections) {
-    const card = document.createElement('div');
-    card.className = 'mb-4 rounded-xl p-3';
-    card.style.cssText = 'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);';
-    const h = document.createElement('div');
-    h.className = 'text-sm mb-2';
-    h.style.cssText = 'color:var(--gold);letter-spacing:.03em;';
-    h.textContent = sec.title;
-    const b = document.createElement('div');
-    b.className = 'text-sm';
-    b.style.cssText = 'color:rgba(226,226,240,.9);line-height:2;';
-    card.appendChild(h);
-    card.appendChild(b);
-    root.appendChild(card);
-    await typewriterElement(b, sec.body, 14);
-    b.innerHTML = markdownLiteToHtml(sec.body);
-    await sleep(220);
-  }
+  renderFortuneCards(id, text);
 }
 
 /* ─────────────────────────────────────────────────────────────────
