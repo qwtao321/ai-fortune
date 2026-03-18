@@ -1,0 +1,68 @@
+---
+description: 梅花易数方位自动化逻辑规则，涉及方位输入、朝向获取与八卦映射
+globs: **/*.js,**/*.html
+alwaysApply: false
+---
+
+# Rule: Divine Orientation Logic（易经方位自动化）
+
+## 权限获取优先级
+
+1. **优先调用** `navigator.permissions` + `DeviceOrientationEvent` 获取设备朝向（Alpha 角）
+2. **降级处理**：用户拒绝权限或设备不支持时，自动切换为"手动选择八方图" UI
+
+```javascript
+// ✅ 正确流程
+async function getOrientation() {
+  try {
+    const perm = await navigator.permissions.query({ name: 'accelerometer' });
+    if (perm.state === 'granted' || perm.state === 'prompt') {
+      // 请求 DeviceOrientationEvent
+      window.addEventListener('deviceorientationabsolute', handler, { once: true });
+    } else {
+      showManualDirectionPicker(); // 降级
+    }
+  } catch {
+    showManualDirectionPicker(); // 降级
+  }
+}
+```
+
+## Alpha 角 → 八卦方位映射
+
+将 `DeviceOrientationEvent.alpha`（0–360°，正北=0°）映射为八卦：
+
+| 角度范围 | 方位 | 八卦 |
+|----------|------|------|
+| 337.5° – 22.5°  | 正北 | 坎 |
+| 22.5°  – 67.5°  | 东北 | 艮 |
+| 67.5°  – 112.5° | 正东 | 震 |
+| 112.5° – 157.5° | 东南 | 巽 |
+| 157.5° – 202.5° | 正南 | 离 |
+| 202.5° – 247.5° | 西南 | 坤 |
+| 247.5° – 292.5° | 正西 | 兑 |
+| 292.5° – 337.5° | 西北 | 乾 |
+
+```javascript
+// ✅ 映射函数
+function alphaToGua(alpha) {
+  const dirs = [
+    { name: '坎', label: '正北', min: 337.5, max: 360 },
+    { name: '坎', label: '正北', min: 0,     max: 22.5 },
+    { name: '艮', label: '东北', min: 22.5,  max: 67.5 },
+    { name: '震', label: '正东', min: 67.5,  max: 112.5 },
+    { name: '巽', label: '东南', min: 112.5, max: 157.5 },
+    { name: '离', label: '正南', min: 157.5, max: 202.5 },
+    { name: '坤', label: '西南', min: 202.5, max: 247.5 },
+    { name: '兑', label: '正西', min: 247.5, max: 292.5 },
+    { name: '乾', label: '西北', min: 292.5, max: 337.5 },
+  ];
+  return dirs.find(d => alpha >= d.min && alpha < d.max) || dirs[0];
+}
+```
+
+## 手动八方图 UI（降级方案）
+
+- 展示八方罗盘图，用户点击选择方位
+- 选中项高亮，返回对应八卦名称
+- 样式保持与项目暗色主题一致

@@ -268,7 +268,7 @@ function callZhipu(prompt) {
     if (!apiKey) return reject(new Error('未配置环境变量 ZHIPU_API_KEY'));
 
     const body = JSON.stringify({
-      model: 'glm-4-flash',
+      model: 'glm-4.6v-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.85,
       max_tokens: 800,

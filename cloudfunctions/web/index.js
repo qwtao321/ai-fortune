@@ -6,7 +6,9 @@
  * 功能：通过 HTTP 触发器直接返回 index.html 页面内容
  *
  * HTTP 访问地址（需在 TCB 控制台创建触发路径）：
- *   路径 /web → 返回网页 HTML
+ *   路径 /ai-fortune 或 /ai-fortune/ → 返回网页 HTML
+ *   路径 /ai-fortune/guaDict.js → 返回卦辞字典脚本
+ *   路径 /ai-fortune/fiveElementsLogic.js → 返回五行逻辑脚本
  * ─────────────────────────────────────────────────────────────────
  */
 
