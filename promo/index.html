@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>产品宣传图</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #070b14;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      padding: 40px;
+      align-items: center;
+    }
+
+    /* ── 通用卡片容器 ── */
+    .card {
+      width: 540px;
+      height: 960px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 52px 44px 48px;
+      flex-shrink: 0;
+    }
+
+    /* ── 背景 ── */
+    .bg-base {
+      background:
+        radial-gradient(ellipse at 20% 0%,   rgba(126,77,255,.55),  transparent 55%),
+        radial-gradient(ellipse at 85% 90%,  rgba(59,130,246,.35),  transparent 55%),
+        radial-gradient(ellipse at 50% 50%,  rgba(10,8,20,1),       transparent 80%),
+        #08091a;
+      border: 1px solid rgba(139,92,246,.25);
+      box-shadow: 0 0 80px rgba(124,58,237,.3), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .bg-gold {
+      background:
+        radial-gradient(ellipse at 15% 10%,  rgba(245,197,24,.4),   transparent 50%),
+        radial-gradient(ellipse at 80% 80%,  rgba(251,146,60,.3),   transparent 50%),
+        #0c0a00;
+      border: 1px solid rgba(245,197,24,.2);
+      box-shadow: 0 0 80px rgba(245,197,24,.2), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .bg-cyan {
+      background:
+        radial-gradient(ellipse at 10% 5%,   rgba(6,182,212,.4),    transparent 50%),
+        radial-gradient(ellipse at 90% 90%,  rgba(99,102,241,.35),  transparent 50%),
+        #050e14;
+      border: 1px solid rgba(6,182,212,.25);
+      box-shadow: 0 0 80px rgba(6,182,212,.2), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .bg-rose {
+      background:
+        radial-gradient(ellipse at 80% 5%,   rgba(244,63,94,.4),    transparent 50%),
+        radial-gradient(ellipse at 20% 90%,  rgba(124,58,237,.4),   transparent 50%),
+        #100810;
+      border: 1px solid rgba(244,63,94,.2);
+      box-shadow: 0 0 80px rgba(244,63,94,.2), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+    /* ── 通用文字 ── */
+    .label {
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .title-lg {
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1.12;
+      letter-spacing: -.01em;
+    }
+    .title-md {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .subtitle {
+      font-size: 15px;
+      line-height: 1.85;
+      color: rgba(220,228,241,.7);
+    }
+
+    /* ── 装饰线 ── */
+    .divider {
+      width: 48px;
+      height: 2px;
+      border-radius: 2px;
+      margin: 18px 0;
+    }
+
+    /* ── 玻璃卡 ── */
+    .glass-chip {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 14px 18px;
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── 标签 ── */
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+    }
+
+    /* ── 底部水印 ── */
+    .watermark {
+      font-size: 12px;
+      letter-spacing: .12em;
+      opacity: .35;
+    }
+
+    /* ── 大符文装饰 ── */
+    .rune {
+      position: absolute;
+      font-size: 260px;
+      opacity: .04;
+      pointer-events: none;
+      user-select: none;
+      line-height: 1;
+    }
+
+    /* ── 趋势图模拟 ── */
+    .mini-chart {
+      width: 100%;
+      height: 90px;
+      position: relative;
+    }
+    .mini-chart svg { width: 100%; height: 100%; }
+
+    /* ── 功能行 ── */
+    .feature-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .feature-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .feature-desc  { font-size: 12px; color: rgba(220,228,241,.6); line-height: 1.6; }
+
+    /* ── 卦爻展示 ── */
+    .yao-line {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .yao-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(245,197,24,.7);
+    }
+
+    /* ── 数字大字 ── */
+    .stat-num { font-size: 56px; font-weight: 900; line-height: 1; }
+    .stat-label { font-size: 12px; margin-top: 4px; opacity: .6; }
+
+    /* ── 流年标签列 ── */
+    .year-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .year-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .year-text { font-size: 13px; color: rgba(220,228,241,.8); line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     Card 1 · Hero 主视觉
+═══════════════════════════════════════════════ -->
+<div class="card bg-base" id="card1">
+  <!-- 背景大符文 -->
+  <div class="rune" style="right:-40px;top:60px;transform:rotate(15deg)">☯</div>
+  <div class="rune" style="left:-60px;bottom:-40px;font-size:200px;">✦</div>
+
+  <!-- 顶部标识 -->
+  <div>
+    <div class="label" style="color:rgba(167,139,250,.8);">fortune · thesolve.cloud</div>
+    <div class="divider" style="background:linear-gradient(90deg,#7c3aed,transparent);"></div>
+    <div class="title-lg" style="color:#fff;">
+      洞见命运<br/>
+      <span style="background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">掌控当下</span>
+    </div>
+    <p class="subtitle" style="margin-top:20px;">
+      融合千年命理智慧与大模型推理能力<br/>
+      八字命盘 · 梅花易数 · 十年时运曲线
+    </p>
+  </div>
+
+  <!-- 中部卡片 -->
+  <div>
+    <div class="glass-chip" style="margin-bottom:14px;">
+      <div style="font-size:11px;color:rgba(167,139,250,.7);margin-bottom:10px;letter-spacing:.1em;">【原局格局】</div>
+      <div style="font-size:13.5px;color:rgba(220,228,241,.9);line-height:1.9;">
+        日柱<strong style="color:#a78bfa;">甲子</strong>，甲木生于子月，水木相生，思维敏锐、天生具备战略眼光。<br/>
+        月柱<strong style="color:#60a5fa;">壬子</strong>，双水护木，贵人缘深厚，35岁前后迎来事业质变。
+      </div>
+    </div>
+    <div class="glass-chip">
+      <div style="font-size:11px;color:rgba(253,214,138,.7);margin-bottom:10px;letter-spacing:.1em;">⚡ 转折点 · 2028年</div>
+      <div style="font-size:13px;color:rgba(253,186,116,.9);line-height:1.8;">
+        甲辰流年，木火通明，事业触底反弹<br/>进入10年上升通道，宜主动出击布局
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+    <div>
+      <div style="font-size:11px;color:rgba(167,139,250,.5);margin-bottom:6px;">AI 命理推演引擎</div>
+      <div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:.06em;">THE SOLVE</div>
+    </div>
+    <div class="watermark" style="color:rgba(167,139,250,.6);">fortune.thesolve.cloud</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     Card 2 · 功能矩阵
+═══════════════════════════════════════════════ -->
+<div class="card bg-base" id="card2">
+  <div class="rune" style="right:-30px;bottom:80px;font-size:300px;opacity:.03;">易</div>
+
+  <!-- 顶部 -->
+  <div>
+    <div class="tag" style="background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;">
+      · 核心功能
+    </div>
+    <div class="title-md" style="color:#fff;margin-top:16px;">
+      四维命理<br/>
+      <span style="background:linear-gradient(135deg,#a78bfa,#f9a8d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">精准解读</span>
+    </div>
+    <p class="subtitle" style="margin-top:12px;font-size:13px;">
+      每一次推演都基于你的真实八字<br/>结合当年流年做出专属分析
+    </p>
+  </div>
+
+  <!-- 功能列表 -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;margin:24px 0;">
+    <div class="feature-row">
+      <div class="feature-icon" style="background:rgba(167,139,250,.15);">🔮</div>
+      <div>
+        <div class="feature-title" style="color:#c4b5fd;">八字命盘 · 原局格局</div>
+        <div class="feature-desc">日柱为核心，精析性格天赋与一生成就上限，每项结论点名具体干支纳音</div>
+      </div>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon" style="background:rgba(96,165,250,.15);">🌀</div>
+      <div>
+        <div class="feature-title" style="color:#93c5fd;">大运推演 · 阶段走势</div>
+        <div class="feature-desc">明确当前10年大运干支，标注核心转折点年份及应对策略</div>
+      </div>
+    </div>
+    <div class="feature-row">
+      <div class="feature-icon" style="background:rgba(245,197,24,.12);">📅</div>
+      <div>
+        <div class="feature-title" style="color:#fde68a;">流年精批 · 近三年</div>
+        <div class="feature-desc">逐年输出关键词 + 建议动作，缓解对未来的确定性焦虑</div>
+      </div>
+    </div>
+    <div class="feature-row" style="border:none;">
+      <div class="feature-icon" style="background:rgba(16,185,129,.12);">☯️</div>
+      <div>
+        <div class="feature-title" style="color:#6ee7b7;">梅花易数 · 即问即答</div>
+        <div class="feature-desc">指南针定方位，能量起卦，三境卦象 + 体用生克实时解读</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部统计 -->
+  <div style="display:flex;gap:0;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;">
+    <div style="flex:1;padding:16px;text-align:center;border-right:1px solid rgba(255,255,255,.08);">
+      <div class="stat-num" style="color:#a78bfa;">64</div>
+      <div class="stat-label" style="color:rgba(167,139,250,.6);">卦象收录</div>
+    </div>
+    <div style="flex:1;padding:16px;text-align:center;border-right:1px solid rgba(255,255,255,.08);">
+      <div class="stat-num" style="color:#60a5fa;">10</div>
+      <div class="stat-label" style="color:rgba(96,165,250,.6);">年趋势图</div>
+    </div>
+    <div style="flex:1;padding:16px;text-align:center;">
+      <div class="stat-num" style="color:#fde68a;">∞</div>
+      <div class="stat-label" style="color:rgba(253,230,138,.6);">AI 推演</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     Card 3 · 十年时运曲线
+═══════════════════════════════════════════════ -->
+<div class="card bg-cyan" id="card3">
+  <div class="rune" style="right:-20px;top:40px;font-size:280px;opacity:.04;color:#06b6d4;">曲</div>
+
+  <!-- 顶部 -->
+  <div>
+    <div class="tag" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:#67e8f9;">
+      · 时运能量曲线
+    </div>
+    <div class="title-md" style="color:#fff;margin-top:16px;">
+      看见未来<br/>
+      <span style="background:linear-gradient(135deg,#67e8f9,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">10年走势一图</span>
+    </div>
+    <p class="subtitle" style="margin-top:12px;font-size:13px;">
+      AI 基于五行旺衰推算每一年的<br/>综合运势、事业运与财运能量值
+    </p>
+  </div>
+
+  <!-- 模拟趋势图 -->
+  <div style="margin:8px 0;">
+    <div class="glass-chip" style="padding:20px 20px 16px;">
+      <!-- SVG 折线图模拟 -->
+      <svg viewBox="0 0 460 120" style="width:100%;height:120px;" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#a78bfa" stop-opacity=".3"/>
+            <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- 网格线 -->
+        <line x1="0" y1="30"  x2="460" y2="30"  stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+        <line x1="0" y1="60"  x2="460" y2="60"  stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+        <line x1="0" y1="90"  x2="460" y2="90"  stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+        <!-- 财运虚线 -->
+        <polyline points="0,80 46,72 92,68 138,75 184,65 230,55 276,48 322,52 368,44 414,40 460,36"
+          fill="none" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="4,3" opacity=".6"/>
+        <!-- 事业虚线 -->
+        <polyline points="0,70 46,62 92,58 138,65 184,50 230,42 276,38 322,45 368,35 414,30 460,28"
+          fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="4,3" opacity=".6"/>
+        <!-- 综合曲线面积 -->
+        <path d="M0,75 C30,70 60,65 92,60 C120,55 150,72 184,58 C210,48 240,38 276,32 C310,26 340,42 368,30 C400,20 430,22 460,18 L460,120 L0,120 Z"
+          fill="url(#grad1)"/>
+        <!-- 综合曲线 -->
+        <path d="M0,75 C30,70 60,65 92,60 C120,55 150,72 184,58 C210,48 240,38 276,32 C310,26 340,42 368,30 C400,20 430,22 460,18"
+          fill="none" stroke="#a78bfa" stroke-width="2.5"/>
+        <!-- 转折点 1：上升 -->
+        <circle cx="276" cy="32" r="8" fill="rgba(251,146,60,.2)"/>
+        <circle cx="276" cy="32" r="5" fill="#fb923c"/>
+        <text x="276" y="30" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold" dy="-2">↑</text>
+        <text x="276" y="16" text-anchor="middle" fill="#fdba74" font-size="9" font-weight="bold">2028</text>
+        <!-- 转折点 2：下降 -->
+        <circle cx="184" cy="58" r="8" fill="rgba(239,68,68,.2)"/>
+        <circle cx="184" cy="58" r="5" fill="#f87171"/>
+        <text x="184" y="56" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold" dy="-1">↓</text>
+        <text x="184" y="44" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="bold">2026</text>
+        <!-- X轴年份 -->
+        <text x="0"   y="118" fill="rgba(156,163,175,.5)" font-size="8">2026</text>
+        <text x="92"  y="118" fill="rgba(156,163,175,.5)" font-size="8">2028</text>
+        <text x="184" y="118" fill="rgba(156,163,175,.5)" font-size="8">2030</text>
+        <text x="276" y="118" fill="rgba(156,163,175,.5)" font-size="8">2032</text>
+        <text x="368" y="118" fill="rgba(156,163,175,.5)" font-size="8">2034</text>
+      </svg>
+      <!-- 图例 -->
+      <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:rgba(156,163,175,.6);">
+        <span><span style="display:inline-block;width:10px;height:2px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></span>综合</span>
+        <span><span style="display:inline-block;width:10px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;border-top:1px dashed #60a5fa;"></span>事业</span>
+        <span><span style="display:inline-block;width:10px;height:2px;background:#fde68a;vertical-align:middle;margin-right:4px;"></span>财运</span>
+        <span><span style="display:inline-block;width:8px;height:8px;background:#fb923c;border-radius:50%;vertical-align:middle;margin-right:4px;"></span>转折点</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 转折点卡片 -->
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:rgba(251,146,60,.1);border-left:3px solid #fb923c;">
+      <span style="font-size:16px;">⬆️</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#fdba74;">2028年 · 事业质变期</div>
+        <div style="font-size:12px;color:rgba(220,228,241,.7);margin-top:2px;">甲辰流年，木火通明，触底反弹进入上升通道</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:rgba(239,68,68,.1);border-left:3px solid #f87171;">
+      <span style="font-size:16px;">⬇️</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#fca5a5;">2026年 · 调整蓄力期</div>
+        <div style="font-size:12px;color:rgba(220,228,241,.7);margin-top:2px;">癸卯流年，水木争泄，宜守不宜攻，积累人脉资源</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="watermark" style="color:rgba(6,182,212,.4);text-align:right;">fortune.thesolve.cloud</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     Card 4 · 梅花易数 · 方位罗盘
+═══════════════════════════════════════════════ -->
+<div class="card bg-gold" id="card4">
+  <div class="rune" style="right:-20px;bottom:60px;font-size:320px;opacity:.04;color:#fde68a;">卦</div>
+
+  <!-- 顶部 -->
+  <div>
+    <div class="tag" style="background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.3);color:#fde68a;">
+      · 梅花易数 · 数字起卦
+    </div>
+    <div class="title-md" style="color:#fff;margin-top:16px;">
+      指南针起卦<br/>
+      <span style="background:linear-gradient(135deg,#fde68a,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">方位即天机</span>
+    </div>
+    <p class="subtitle" style="margin-top:12px;font-size:13px;">
+      手机顶端朝向即为方位，自动映射八卦方位<br/>结合能量长按起卦，AI 解读三境卦象
+    </p>
+  </div>
+
+  <!-- 罗盘模拟 -->
+  <div style="display:flex;flex-direction:column;gap:12px;margin:4px 0;">
+    <!-- 3×3 罗盘 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">西北</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.25);border:1px solid rgba(245,197,24,.6);font-size:13px;color:#fde68a;font-weight:700;box-shadow:0 0 12px rgba(245,197,24,.3);">北 ✦</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">东北</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">西</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:transparent;border:none;font-size:20px;color:rgba(245,197,24,.35);">☯</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">东</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">西南</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">南</div>
+      <div style="padding:10px 0;text-align:center;border-radius:10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);font-size:13px;color:rgba(220,228,241,.7);">东南</div>
+    </div>
+    <!-- 解读结果 -->
+    <div class="glass-chip" style="border-color:rgba(245,197,24,.15);">
+      <div style="font-size:11px;color:rgba(253,214,138,.6);margin-bottom:10px;letter-spacing:.1em;">【卦象解码】坎为水 · 本卦</div>
+      <div style="font-size:13px;color:rgba(220,228,241,.88);line-height:1.85;">
+        <strong style="color:#fde68a;">坎卦</strong>象征深陷险境而心不动，当前处境看似被动，实则<strong style="color:#fb923c;">内有深谋</strong>。
+      </div>
+    </div>
+    <div class="glass-chip" style="border-color:rgba(251,146,60,.15);">
+      <div style="font-size:11px;color:rgba(253,186,116,.6);margin-bottom:8px;letter-spacing:.1em;">⚡ 结局定断</div>
+      <div style="font-size:12px;color:rgba(253,186,116,.85);line-height:1.8;">
+        变卦<strong style="color:#fde68a;">水雷屯</strong>，万物初生之象——<br/>
+        感到阻力 → 暂缓行动保存实力 → 贵人在金水年出现
+      </div>
+    </div>
+  </div>
+
+  <div class="watermark" style="color:rgba(245,197,24,.3);text-align:right;">fortune.thesolve.cloud</div>
+</div>
+
+</body>
+</html>
