@@ -44,11 +44,11 @@
        ───────────────────────────────────────────────────────── */
     :root {
       --gold:    #f5c518;
-      --bg:      #0d0d1a;
+      --bg:      #07080f;
       --purple:  #7c3aed;
       --indigo:  #4f46e5;
-      --card-bg: rgba(255,255,255,0.04);
-      --card-bd: rgba(255,255,255,0.08);
+      --card-bg: rgba(14,10,30,0.75);
+      --card-bd: rgba(140,120,220,0.18);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -56,12 +56,23 @@
     body {
       background: var(--bg);
       background-image:
-        radial-gradient(ellipse at 15% 10%,  rgba(124,58,237,0.20) 0%, transparent 52%),
-        radial-gradient(ellipse at 85% 85%,  rgba(79,70,229,0.18)  0%, transparent 52%),
-        radial-gradient(ellipse at 50% 50%,  rgba(99,102,241,0.06) 0%, transparent 70%);
+        radial-gradient(ellipse 70% 55% at 12%  5%,  rgba(110,50,220,0.28) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 88% 90%,  rgba(60, 80,210,0.22) 0%, transparent 58%),
+        radial-gradient(ellipse 40% 40% at 50% 48%,  rgba(90, 60,180,0.10) 0%, transparent 68%),
+        radial-gradient(ellipse 30% 25% at 72% 20%,  rgba(245,197,24,0.06) 0%, transparent 55%);
       min-height: 100vh;
       font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','STSong',sans-serif;
       color: #e2e2f0;
+    }
+
+    /* 精密网格纹理叠层 */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(120,100,220,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120,100,220,.028) 1px, transparent 1px);
+      background-size: 52px 52px;
     }
 
     /* ─────────────────────────────────────────────────────────
@@ -69,9 +80,21 @@
        ───────────────────────────────────────────────────────── */
     .glass {
       background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border: 1px solid var(--card-bd);
+      box-shadow:
+        inset 0 1px 0 rgba(200,180,255,.08),
+        0 12px 40px rgba(0,0,0,.45),
+        0 0 0 0.5px rgba(100,80,200,.1);
+      position: relative;
+    }
+    /* 卡片顶部高光线 */
+    .glass::before {
+      content: '';
+      position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(180,160,255,.22), transparent);
+      pointer-events: none;
     }
 
     /* ─────────────────────────────────────────────────────────
@@ -79,25 +102,30 @@
        ───────────────────────────────────────────────────────── */
     .title-glow {
       color: var(--gold);
-      text-shadow: 0 0 28px rgba(245,197,24,.75), 0 0 55px rgba(245,197,24,.35);
+      text-shadow:
+        0 0 18px rgba(245,197,24,.9),
+        0 0 45px rgba(245,197,24,.55),
+        0 0 90px rgba(245,197,24,.2),
+        0 2px 4px rgba(0,0,0,.6);
     }
 
     /* ─────────────────────────────────────────────────────────
        输入控件
        ───────────────────────────────────────────────────────── */
     .inp {
-      background: rgba(124,58,237,.08);
-      border: 1px solid rgba(124,58,237,.28);
+      background: rgba(20,12,42,.6);
+      border: 1px solid rgba(120,90,210,.25);
       color: #e2e2f0;
       transition: border-color .25s, box-shadow .25s, background .25s;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,.3);
     }
     .inp:focus {
       outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(245,197,24,.14);
-      background: rgba(124,58,237,.13);
+      border-color: rgba(245,197,24,.65);
+      box-shadow: 0 0 0 3px rgba(245,197,24,.1), inset 0 1px 3px rgba(0,0,0,.3);
+      background: rgba(30,16,55,.7);
     }
-    .inp option { background: #1a1a2e; color: #e2e2f0; }
+    .inp option { background: #120c22; color: #e2e2f0; }
 
     /* select 下拉箭头 */
     select.inp {
@@ -113,17 +141,28 @@
        主按钮
        ───────────────────────────────────────────────────────── */
     .btn-primary {
-      background: linear-gradient(135deg, var(--purple) 0%, var(--indigo) 100%);
-      border: 1px solid rgba(245,197,24,.35);
-      box-shadow: 0 0 26px rgba(124,58,237,.4), inset 0 1px 0 rgba(255,255,255,.07);
+      background: linear-gradient(135deg, #7c3aed 0%, #5b3ccf 50%, #4f46e5 100%);
+      border: 1px solid rgba(245,197,24,.4);
+      box-shadow:
+        0 0 28px rgba(124,58,237,.5),
+        0 0 60px rgba(124,58,237,.2),
+        inset 0 1px 0 rgba(255,255,255,.1);
       transition: transform .25s, box-shadow .25s;
+      position: relative; overflow: hidden;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.1), transparent 60%);
+      opacity: 0; transition: opacity .2s;
     }
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 32px rgba(124,58,237,.6);
+      box-shadow: 0 8px 40px rgba(124,58,237,.7), 0 0 80px rgba(124,58,237,.25);
     }
+    .btn-primary:hover:not(:disabled)::after { opacity: 1; }
     .btn-primary:active:not(:disabled) { transform: translateY(0); }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
 
     /* ─────────────────────────────────────────────────────────
        CSS 动画
@@ -291,15 +330,25 @@
 
   /* 模式切换 */
   .mode-tab {
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.12);
-    color: #9ca3af;
+    background: rgba(20,12,40,.5);
+    border: 1px solid rgba(100,80,180,.2);
+    color: rgba(156,163,175,.8);
+    transition: all .2s;
+  }
+  .mode-tab:not(.active):hover {
+    border-color: rgba(120,90,200,.4);
+    color: rgba(196,181,253,.8);
+    background: rgba(30,16,55,.6);
   }
   .mode-tab.active {
-    background: linear-gradient(135deg, var(--purple), var(--indigo));
-    border-color: rgba(245,197,24,.35);
+    background: linear-gradient(135deg, rgba(124,58,237,.9) 0%, rgba(79,70,229,.85) 100%);
+    border-color: rgba(245,197,24,.5);
     color: var(--gold);
-    box-shadow: 0 0 18px rgba(124,58,237,.35);
+    box-shadow:
+      0 0 22px rgba(124,58,237,.55),
+      0 0 50px rgba(124,58,237,.2),
+      inset 0 1px 0 rgba(255,255,255,.1);
+    text-shadow: 0 0 12px rgba(245,197,24,.6);
   }
 
   /* 梅花易数能量按钮 */
@@ -367,16 +416,32 @@
     padding: 7px 4px;
     border-radius: 8px;
     font-size: 12px;
-    border: 1px solid rgba(124,93,250,.25);
-    background: rgba(124,93,250,.08);
-    color: rgba(196,181,253,.75);
+    border: 1px solid rgba(120,90,220,.22);
+    background: rgba(18,10,38,.6);
+    color: rgba(180,165,240,.7);
     cursor: pointer;
-    transition: all .15s;
+    transition: all .18s;
     text-align: center;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
   }
-  .dir-btn:hover { background: rgba(124,93,250,.22); color: #e9d5ff; }
-  .dir-btn.active { background: rgba(124,93,250,.4); border-color: rgba(196,181,253,.7); color: #f5f3ff; font-weight: 700; }
-  .dir-btn.dir-center { background: transparent; border-color: transparent; color: rgba(196,181,253,.4); font-size: 16px; cursor: default; }
+  .dir-btn:hover {
+    background: rgba(100,60,200,.28);
+    border-color: rgba(180,150,255,.45);
+    color: #e9d5ff;
+    box-shadow: 0 0 10px rgba(120,80,220,.25);
+  }
+  .dir-btn.active {
+    background: linear-gradient(135deg, rgba(124,58,237,.55), rgba(79,70,229,.45));
+    border-color: rgba(245,197,24,.5);
+    color: var(--gold);
+    font-weight: 700;
+    box-shadow: 0 0 14px rgba(124,58,237,.4), inset 0 1px 0 rgba(255,255,255,.08);
+    text-shadow: 0 0 8px rgba(245,197,24,.5);
+  }
+  .dir-btn.dir-center {
+    background: transparent; border-color: transparent;
+    color: rgba(180,165,240,.3); font-size: 16px; cursor: default;
+  }
   .outer-tag {
     display: inline-block;
     padding: 2px 8px;
@@ -387,6 +452,78 @@
     background: rgba(79,70,229,.18);
     border: 1px solid rgba(79,70,229,.35);
     color: #c4b5fd;
+  }
+
+  /* ── 高级感增强补丁 ──────────────────────────────── */
+
+  /* 确保所有内容在 body::before 网格之上 */
+  #stars, body > div, body > main, body > section, body > header { position: relative; z-index: 1; }
+
+  /* 加载遮罩 */
+  #loading-overlay { background: rgba(7,8,15,.92); }
+
+  /* 星星更亮 */
+  .star { mix-blend-mode: screen; }
+
+  /* 滚动条 - 更细更精致 */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(124,58,237,.6), rgba(79,70,229,.4));
+    border-radius: 2px;
+  }
+
+  /* 历史条目 */
+  .hist-item {
+    border-left: 2px solid rgba(245,197,24,.25);
+    background: rgba(14,8,30,.4) !important;
+  }
+  .hist-item:hover {
+    border-left-color: var(--gold);
+    background: rgba(80,40,160,.12) !important;
+    box-shadow: 0 0 20px rgba(80,40,160,.1);
+  }
+
+  /* 结果卡片升级 */
+  .fc-card {
+    background: rgba(14,8,32,.65);
+    border: 1px solid rgba(120,90,210,.2);
+    box-shadow: inset 0 1px 0 rgba(180,160,255,.06), 0 4px 16px rgba(0,0,0,.3);
+  }
+  .fc-seal {
+    background: linear-gradient(135deg, rgba(245,197,24,.1), rgba(124,58,237,.12));
+    border: 1px solid rgba(245,197,24,.35);
+    box-shadow: 0 0 24px rgba(245,197,24,.1);
+  }
+
+  /* 梅花六爻卡片 */
+  .hex-box {
+    background: rgba(14,8,32,.6);
+    border: 1px solid rgba(120,90,210,.18);
+    box-shadow: inset 0 1px 0 rgba(180,160,255,.05);
+  }
+
+  /* 能量涟漪 */
+  .energy-ripple { border-color: rgba(245,197,24,.45); }
+
+  /* 设置弹窗 */
+  #settings-modal .glass {
+    background: rgba(10,6,24,.9);
+    border-color: rgba(130,100,220,.25);
+    box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 60px rgba(80,40,180,.15);
+  }
+
+  /* 购买按钮区域 */
+  #settings-modal [style*="rgba(245,197,24,.06)"] {
+    background: rgba(20,14,35,.8) !important;
+  }
+
+  /* 趋势图区域 */
+  #trend-section {
+    background: rgba(10,6,22,.5);
+    border-radius: 16px;
+    border: 1px solid rgba(100,80,200,.15);
+    box-shadow: inset 0 1px 0 rgba(180,160,255,.05);
   }
   </style>
 </head>
