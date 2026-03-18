@@ -619,6 +619,25 @@
              placeholder="心中默念你所求之事（如：明天的面试能过吗？）" />
     </div>
     <div class="mb-4">
+      <div class="flex items-center justify-between mb-1.5">
+        <label class="text-xs" style="color:rgba(196,181,253,.8);">面向方位</label>
+        <button id="btn-compass" onclick="tryCompass()" class="text-xs px-2 py-1 rounded-lg" style="background:rgba(124,93,250,.18);border:1px solid rgba(124,93,250,.4);color:rgba(196,181,253,.9);">📡 自动获取</button>
+      </div>
+      <div id="compass-ring" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px;">
+        <button class="dir-btn" data-dir="西北" onclick="selectDir(this)">西北</button>
+        <button class="dir-btn" data-dir="北"  onclick="selectDir(this)">北</button>
+        <button class="dir-btn" data-dir="东北" onclick="selectDir(this)">东北</button>
+        <button class="dir-btn" data-dir="西"  onclick="selectDir(this)">西</button>
+        <button class="dir-btn dir-center" data-dir="" disabled>☯</button>
+        <button class="dir-btn" data-dir="东"  onclick="selectDir(this)">东</button>
+        <button class="dir-btn" data-dir="西南" onclick="selectDir(this)">西南</button>
+        <button class="dir-btn" data-dir="南"  onclick="selectDir(this)">南</button>
+        <button class="dir-btn" data-dir="东南" onclick="selectDir(this)">东南</button>
+      </div>
+      <input type="hidden" id="mh-facing" value="北" />
+      <div id="compass-status" class="text-xs" style="color:rgba(156,163,175,.7);">请手动选择或点击「自动获取」</div>
+    </div>
+    <div class="mb-4">
       <label class="block text-xs mb-2" style="color:rgba(196,181,253,.85);">注入当前能量起卦（长按 3 秒）</label>
       <div id="energy-wrap" class="energy-wrap">
         <div class="energy-ripple r1"></div>
@@ -649,25 +668,6 @@
     </div>
     <div id="mh-preview" class="rounded-xl p-3 text-xs hidden"
          style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.25);"></div>
-    <div class="mt-3">
-      <div class="flex items-center justify-between mb-1.5">
-        <label class="text-xs" style="color:rgba(196,181,253,.8);">面向方位</label>
-        <button id="btn-compass" onclick="tryCompass()" class="text-xs px-2 py-1 rounded-lg" style="background:rgba(124,93,250,.18);border:1px solid rgba(124,93,250,.4);color:rgba(196,181,253,.9);">📡 自动获取</button>
-      </div>
-      <div id="compass-ring" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px;">
-        <button class="dir-btn" data-dir="西北" onclick="selectDir(this)">西北</button>
-        <button class="dir-btn" data-dir="北"  onclick="selectDir(this)">北</button>
-        <button class="dir-btn" data-dir="东北" onclick="selectDir(this)">东北</button>
-        <button class="dir-btn" data-dir="西"  onclick="selectDir(this)">西</button>
-        <button class="dir-btn dir-center" data-dir="" disabled>☯</button>
-        <button class="dir-btn" data-dir="东"  onclick="selectDir(this)">东</button>
-        <button class="dir-btn" data-dir="西南" onclick="selectDir(this)">西南</button>
-        <button class="dir-btn" data-dir="南"  onclick="selectDir(this)">南</button>
-        <button class="dir-btn" data-dir="东南" onclick="selectDir(this)">东南</button>
-      </div>
-      <input type="hidden" id="mh-facing" value="北" />
-      <div id="compass-status" class="text-xs" style="color:rgba(156,163,175,.7);">请手动选择或点击「自动获取」</div>
-    </div>
     <div id="mh-outer" class="rounded-xl p-3 text-xs mt-3 hidden"
          style="background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.25);"></div>
   </section>
