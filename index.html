@@ -636,6 +636,7 @@
       </div>
       <input type="hidden" id="mh-facing" value="北" />
       <div id="compass-status" class="text-xs" style="color:rgba(156,163,175,.7);">请手动选择或点击「自动获取」</div>
+      <div id="compass-debug" class="text-xs mt-1 hidden" style="color:rgba(156,163,175,.5);font-family:monospace;"></div>
     </div>
     <div class="mb-4">
       <label class="block text-xs mb-2" style="color:rgba(196,181,253,.85);">注入当前能量起卦（长按 3 秒）</label>
@@ -1261,6 +1262,9 @@ function tryCompass() {
   const statusEl = document.getElementById('compass-status');
   statusEl.textContent = '获取中…';
 
+  let compassWatchId = null;
+  const debugEl = document.getElementById('compass-debug');
+
   function onOrientation(e) {
     const alpha = e.alpha;
     if (alpha == null) {
@@ -1269,23 +1273,45 @@ function tryCompass() {
     }
     const dir = alphaToDir(alpha);
     highlightDir(dir);
-    statusEl.textContent = `指南针自动定向：${dir}（${Math.round(alpha)}°）`;
-    window.removeEventListener('deviceorientationabsolute', onOrientation);
-    window.removeEventListener('deviceorientation', onOrientation);
+    statusEl.textContent = `指南针自动定向：${dir}`;
+    // 显示原始角度供校验
+    if (debugEl) {
+      debugEl.classList.remove('hidden');
+      debugEl.textContent = `原始角度 α=${Math.round(alpha)}°（手机顶端朝向）· ${e.absolute ? '绝对北' : '相对北'}`;
+    }
+  }
+
+  function startLiveCompass(eventName) {
+    window.addEventListener(eventName, onOrientation);
+    // 3秒后停止监听，锁定结果
+    compassWatchId = setTimeout(() => {
+      window.removeEventListener(eventName, onOrientation);
+    }, 3000);
   }
 
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS 13+ 需要主动请求权限
     DeviceOrientationEvent.requestPermission().then(state => {
       if (state === 'granted') {
-        window.addEventListener('deviceorientationabsolute', onOrientation, { once: true });
-        window.addEventListener('deviceorientation', onOrientation, { once: true });
+        startLiveCompass('deviceorientationabsolute');
       } else {
         statusEl.textContent = '权限被拒绝，请手动选择方位';
       }
     }).catch(() => { statusEl.textContent = '权限请求失败，请手动选择'; });
   } else if ('ondeviceorientationabsolute' in window) {
-    window.addEventListener('deviceorientationabsolute', onOrientation, { once: true });
-    setTimeout(() => { if (!document.getElementById('mh-facing').value) statusEl.textContent = '未收到传感器数据，请手动选择'; }, 2000);
+    // Android / 支持绝对朝向的设备
+    startLiveCompass('deviceorientationabsolute');
+    setTimeout(() => {
+      const v = document.getElementById('mh-facing').value;
+      if (!v) statusEl.textContent = '未收到传感器数据，请手动选择';
+    }, 3500);
+  } else if ('ondeviceorientation' in window) {
+    // 降级到相对朝向（可能有磁偏差）
+    startLiveCompass('deviceorientation');
+    setTimeout(() => {
+      const v = document.getElementById('mh-facing').value;
+      if (!v) statusEl.textContent = '未收到传感器数据，请手动选择';
+    }, 3500);
   } else {
     statusEl.textContent = '此设备/浏览器不支持指南针，请手动选择';
   }
