@@ -122,26 +122,23 @@ module.exports = async function handler(req, res) {
 
 function buildPrompt({ name, gender, baziInfo: b }) {
   return `命主：${name}，${gender}
-四柱：${b.yearGan}${b.yearZhi} ${b.monthGan}${b.monthZhi} ${b.dayGan}${b.dayZhi} ${b.timeGan}${b.timeZhi}
-纳音：${b.yearNaYin} / ${b.monthNaYin} / ${b.dayNaYin} / ${b.timeNaYin}
+四柱：${b.yearGan}${b.yearZhi}（${b.yearNaYin}·${b.yearWuXing}） ${b.monthGan}${b.monthZhi}（${b.monthNaYin}·${b.monthWuXing}） ${b.dayGan}${b.dayZhi}（${b.dayNaYin}·${b.dayWuXing}） ${b.timeGan}${b.timeZhi}（${b.timeNaYin}·${b.timeWuXing}）
 农历：${b.lunarYear}${b.lunarMonth}${b.lunarDay}
 
-请用老友聊天的语气，依次输出以下四段，每段 2-3 句实质性结论，不要引用格式说明：
+你是资深命理师，用老友聊天的语气直接输出结论。
+每段必须点名具体的干支或纳音作为依据（如"日柱${b.dayGan}${b.dayZhi}属XX，说明…"），让用户感受到分析是针对他本人的，而非泛泛而谈。
+每段 3-4 句，禁止出现任何推理过程或计算步骤。
 
 ## 【性格特质】
-（写命主真实的性格）
 
 ## 【事业走向】
-（写命主事业的具体特征与建议）
 
 ## 【感情缘分】
-（写感情运势与建议）
 
 ## 【健康提示】
-（写需要注意的健康方向）
 
 ## 【签文】
-（一句七言押韵，格式：XXXX，XXXX。）`;
+一句七言押韵签文，格式：XXXX，XXXX。`;
 }
 
 function guaMetaFromCode(code, fallbackName) {
@@ -173,23 +170,32 @@ function buildMeihuaPrompt({ question, hexagramData: h, outerResponse }) {
   const dirFactor = outerResponse?.directionFactor || {};
   return `问题：${question}
 
-卦象：本卦${ctx.ben.name}，互卦${ctx.hu.name}，变卦${ctx.bian.name}，动爻第${h.movingLine || '-'}爻
-体用：${ctx.elementLine}，${ctx.relationInfo.status}，${ctx.relationInfo.desc}
-外应：农历${timeFactor.lunarMonthDay || '未知'} ${timeFactor.hourZhi || '未知'}时，方位${dirFactor.direction || '未知'}
+【卦象数据】
+本卦：${ctx.ben.name} — ${ctx.ben.guaci}
+互卦：${ctx.hu.name} — ${ctx.hu.guaci}
+变卦：${ctx.bian.name} — ${ctx.bian.guaci}
+动爻：第${h.movingLine || '-'}爻
+体用：${ctx.elementLine}
+生克：${ctx.relationInfo.status} — ${ctx.relationInfo.desc}
+气场：${ctx.relationInfo.vibe}
+外应时间：农历${timeFactor.lunarMonthDay || '未知'} ${timeFactor.hourZhi || '未知'}时 季节${timeFactor.seasonWuxing || '未知'}
+外应方位：${dirFactor.direction || '未知'}
 
-请作为梅花易数专家，直接输出以下四段结论，每段内容具体、犀利：
+你是梅花易数专家，直接输出以下四段结论。
+每段结论必须点名具体卦名（如"${ctx.ben.name}卦象征…"）或体用关系作为依据，让用户感受到是针对这组卦象的分析，而非泛泛而谈。
+每段 3-4 句，禁止推理过程。
 
 ## 【卦象解码】
-（用本卦说现状，互卦说过程，变卦说走向，各一句，引用卦辞原文关键词）
+结合本卦卦义说当前处境，引用互卦说中期变化，引用变卦说最终走向，每卦各点名一次。
 
 ## 【外应分析】
-（说明贵人五行属性、阻力属性，给一句具体行动建议）
+指出贵人五行属性和阻力属性，结合外应时间与方位给出一句具体行动建议。
 
 ## 【过程推演】
-（列2条中期具体预警，每条一句话，直接说会发生什么）
+基于体用生克关系列出 2 条具体预警，直接说会出现什么情况，各一句。
 
 ## 【结局定断】
-（最终走向一句判断，然后3条行动：触发条件 → 你的动作 → 预期结果）`;
+给出最终走向判断，附 3 条行动建议，格式：触发条件 → 你的动作 → 预期结果。`;
 }
 
 // ─── AI Call ────────────────────────────────────────────────────────────────
@@ -250,7 +256,7 @@ async function callZhipu(prompt) {
         { role: 'user', content: prompt },
       ],
       temperature: 0.8,
-      max_tokens: 1200,
+      max_tokens: 1600,
     }),
   });
 
