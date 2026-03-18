@@ -1241,7 +1241,9 @@ const DIR_MAP = [
 ];
 
 function alphaToDir(alpha) {
-  return (DIR_MAP.find(d => alpha >= d.min && alpha < d.max) || DIR_MAP[0]).name;
+  // alpha 是逆时针旋转量，转为顺时针指南针方位角
+  const heading = (360 - alpha) % 360;
+  return (DIR_MAP.find(d => heading >= d.min && heading < d.max) || DIR_MAP[0]).name;
 }
 
 function selectDir(btn) {
@@ -1276,8 +1278,9 @@ function tryCompass() {
     statusEl.textContent = `指南针自动定向：${dir}`;
     // 显示原始角度供校验
     if (debugEl) {
+      const heading = (360 - alpha) % 360;
       debugEl.classList.remove('hidden');
-      debugEl.textContent = `原始角度 α=${Math.round(alpha)}°（手机顶端朝向）· ${e.absolute ? '绝对北' : '相对北'}`;
+      debugEl.textContent = `α=${Math.round(alpha)}° → 方位角=${Math.round(heading)}°（${e.absolute ? '绝对北' : '相对北'}）`;
     }
   }
 
