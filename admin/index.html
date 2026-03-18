@@ -67,6 +67,7 @@
       padding: 10px 14px;
       cursor: pointer;
       font-weight: 600;
+      white-space: nowrap;
     }
     button.secondary {
       background: rgba(255,255,255,.06);
@@ -77,9 +78,36 @@
       border-color: rgba(211,95,95,.45);
       color: #ffd6d6;
     }
+    button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
     .status { font-size: 13px; margin-top: 8px; color: var(--muted); white-space: pre-wrap; }
     .status.ok { color: #9ce1b0; }
     .status.err { color: #ffb7b7; }
+
+    /* ── 批量工具栏 ── */
+    #batch-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin: 12px 0 0;
+      padding: 10px 14px;
+      background: rgba(111,134,176,.12);
+      border: 1px solid rgba(111,134,176,.3);
+      border-radius: 10px;
+      flex-wrap: wrap;
+    }
+    #batch-bar.visible { display: flex; }
+    #batch-count {
+      font-size: 13px;
+      color: #a8bfdf;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+    #batch-bar button { padding: 7px 12px; font-size: 13px; }
+
+    /* ── 表格 ── */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -90,9 +118,21 @@
       border-bottom: 1px solid rgba(255,255,255,.08);
       text-align: left;
       padding: 10px 6px;
-      vertical-align: top;
+      vertical-align: middle;
     }
     th { color: var(--muted); font-weight: 600; }
+    th.cb-col, td.cb-col { width: 36px; text-align: center; padding: 10px 4px; }
+
+    /* 复选框样式 */
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #7b8fb8;
+      cursor: pointer;
+      padding: 0;
+      border-radius: 4px;
+    }
+
     .key { font-family: Consolas, monospace; }
     .actions { display: flex; gap: 6px; }
     .muted { color: var(--muted); font-size: 12px; }
@@ -108,6 +148,10 @@
     .badge-ok   { background: rgba(103,179,126,.18); color: #7ee8a2; border: 1px solid rgba(103,179,126,.4); }
     .badge-warn { background: rgba(220,160,60,.18);  color: #f5c97a; border: 1px solid rgba(220,160,60,.4); }
     .badge-zero { background: rgba(211,95,95,.18);   color: #ffb7b7; border: 1px solid rgba(211,95,95,.4); }
+
+    /* 行选中高亮 */
+    tr.selected td { background: rgba(111,134,176,.1); }
+
     @media (max-width: 780px) {
       .field.half, .field.third { grid-column: span 12; }
     }
@@ -147,10 +191,28 @@
     </div>
 
     <div class="card" style="margin-top:14px;">
-      <div class="muted">密钥列表（最新在前）</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div class="muted">密钥列表（最新在前）</div>
+        <div style="font-size:12px;color:var(--muted);">
+          勾选行后可批量操作 &nbsp;·&nbsp;
+          <a href="#" id="link-select-all" style="color:#a8bfdf;text-decoration:none;">全选</a>
+          &nbsp;/&nbsp;
+          <a href="#" id="link-deselect-all" style="color:#a8bfdf;text-decoration:none;">取消全选</a>
+        </div>
+      </div>
+
+      <!-- 批量操作工具栏 -->
+      <div id="batch-bar">
+        <span id="batch-count">已选 0 条</span>
+        <button id="btn-batch-copy" class="secondary">批量复制</button>
+        <button id="btn-batch-credits" class="secondary">批量改积分</button>
+        <button id="btn-batch-disable" class="danger">批量禁用</button>
+      </div>
+
       <table>
         <thead>
           <tr>
+            <th class="cb-col"><input type="checkbox" id="chk-all" title="全选/取消" /></th>
             <th>密钥</th>
             <th>剩余积分</th>
             <th>备注</th>
@@ -168,12 +230,14 @@
     const LS_KEY = 'ft_admin_secret';
     const $ = (id) => document.getElementById(id);
 
+    /* ── 状态 ── */
     function setStatus(text, type) {
       const el = $('status');
       el.textContent = text;
       el.className = 'status' + (type ? ' ' + type : '');
     }
 
+    /* ── 请求 ── */
     async function postAdmin(payload) {
       const resp = await fetch(API, {
         method: 'POST',
@@ -187,14 +251,11 @@
       return json;
     }
 
-    function getSecret() {
-      return $('secret').value.trim();
-    }
-
+    function getSecret() { return $('secret').value.trim(); }
     function ensureSecret() {
-      const secret = getSecret();
-      if (!secret) throw new Error('请先输入 ADMIN_SECRET');
-      return secret;
+      const s = getSecret();
+      if (!s) throw new Error('请先输入 ADMIN_SECRET');
+      return s;
     }
 
     function formatDate(v) {
@@ -210,12 +271,14 @@
       return `<span class="badge badge-ok">${credits}</span>`;
     }
 
+    /* ── 渲染行 ── */
     function rowHtml(item) {
       const key = item.key || '-';
       const credits = Number(item.credits ?? 0);
       const note = item.note || '';
       const created = formatDate(item.created_at);
-      return `<tr>
+      return `<tr data-key="${key}">
+        <td class="cb-col"><input type="checkbox" class="row-chk" data-key="${key}" /></td>
         <td class="key">${key}</td>
         <td>${creditsBadge(credits)}</td>
         <td>${note}</td>
@@ -230,19 +293,49 @@
       </tr>`;
     }
 
+    /* ── 选中管理 ── */
+    function getCheckedKeys() {
+      return [...document.querySelectorAll('.row-chk:checked')].map(el => el.dataset.key);
+    }
+
+    function updateBatchBar() {
+      const keys = getCheckedKeys();
+      const bar = $('batch-bar');
+      if (keys.length > 0) {
+        bar.classList.add('visible');
+        $('batch-count').textContent = `已选 ${keys.length} 条`;
+      } else {
+        bar.classList.remove('visible');
+      }
+      // 全选框状态同步
+      const allChks = document.querySelectorAll('.row-chk');
+      $('chk-all').checked = allChks.length > 0 && keys.length === allChks.length;
+      $('chk-all').indeterminate = keys.length > 0 && keys.length < allChks.length;
+    }
+
+    function updateRowHighlight() {
+      document.querySelectorAll('#tbody tr').forEach(tr => {
+        const chk = tr.querySelector('.row-chk');
+        tr.classList.toggle('selected', chk && chk.checked);
+      });
+    }
+
+    /* ── 列表 ── */
     async function refreshList() {
       try {
         const secret = ensureSecret();
         setStatus('读取列表中...');
         const res = await postAdmin({ secret, action: 'list' });
         const rows = Array.isArray(res.data) ? res.data : [];
-        $('tbody').innerHTML = rows.map(rowHtml).join('') || '<tr><td colspan="5" class="muted">暂无数据</td></tr>';
+        $('tbody').innerHTML = rows.map(rowHtml).join('') || '<tr><td colspan="6" class="muted">暂无数据</td></tr>';
+        updateBatchBar();
         setStatus(`列表已更新，共 ${rows.length} 条（全量）`, 'ok');
       } catch (e) {
         setStatus('读取失败：' + e.message, 'err');
       }
     }
 
+    /* ── 生成 ── */
     async function generateKeys() {
       try {
         const secret = ensureSecret();
@@ -259,6 +352,7 @@
       }
     }
 
+    /* ── 单条操作 ── */
     async function disableKey(key) {
       try {
         const secret = ensureSecret();
@@ -287,9 +381,7 @@
         const val = prompt(`为 ${key} 设置新积分：`, '10');
         if (val === null) return;
         const credits = Number(val);
-        if (!Number.isFinite(credits) || credits < 0) {
-          throw new Error('积分必须是大于等于 0 的数字');
-        }
+        if (!Number.isFinite(credits) || credits < 0) throw new Error('积分必须是大于等于 0 的数字');
         setStatus(`更新积分中：${key} -> ${credits}...`);
         await postAdmin({ secret, action: 'setCredit', key, credits });
         setStatus(`已更新：${key} -> ${credits}`, 'ok');
@@ -299,6 +391,52 @@
       }
     }
 
+    /* ── 批量操作 ── */
+    async function batchCopy() {
+      const keys = getCheckedKeys();
+      if (!keys.length) return;
+      try {
+        await navigator.clipboard.writeText(keys.join('\n'));
+        setStatus(`已复制 ${keys.length} 个密钥到剪贴板`, 'ok');
+      } catch (e) {
+        setStatus('复制失败：' + e.message, 'err');
+      }
+    }
+
+    async function batchDisable() {
+      const keys = getCheckedKeys();
+      if (!keys.length) return;
+      try {
+        const secret = ensureSecret();
+        if (!confirm(`确定批量禁用选中的 ${keys.length} 个密钥（积分清零）？`)) return;
+        setStatus(`批量禁用中（${keys.length} 条）...`);
+        const res = await postAdmin({ secret, action: 'batchDisable', keys });
+        setStatus(res.message || `已禁用 ${keys.length} 条`, 'ok');
+        await refreshList();
+      } catch (e) {
+        setStatus('批量禁用失败：' + e.message, 'err');
+      }
+    }
+
+    async function batchSetCredit() {
+      const keys = getCheckedKeys();
+      if (!keys.length) return;
+      try {
+        const secret = ensureSecret();
+        const val = prompt(`为选中的 ${keys.length} 个密钥统一设置积分：`, '10');
+        if (val === null) return;
+        const credits = Number(val);
+        if (!Number.isFinite(credits) || credits < 0) throw new Error('积分必须是大于等于 0 的数字');
+        setStatus(`批量更新积分中（${keys.length} 条 -> ${credits}）...`);
+        const res = await postAdmin({ secret, action: 'batchSetCredit', keys, credits });
+        setStatus(res.message || `已更新 ${keys.length} 条`, 'ok');
+        await refreshList();
+      } catch (e) {
+        setStatus('批量改积分失败：' + e.message, 'err');
+      }
+    }
+
+    /* ── 事件绑定 ── */
     $('btn-generate').addEventListener('click', generateKeys);
     $('btn-list').addEventListener('click', refreshList);
     $('btn-save').addEventListener('click', () => {
@@ -313,16 +451,53 @@
       setStatus('已清除本地口令', 'ok');
     });
 
-    $('tbody').addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-act]');
-      if (!btn) return;
-      const act = btn.getAttribute('data-act');
-      const key = btn.getAttribute('data-key');
-      if (act === 'copy') copyKey(key);
-      if (act === 'disable') disableKey(key);
-      if (act === 'set') setCredit(key);
+    // 批量按钮
+    $('btn-batch-copy').addEventListener('click', batchCopy);
+    $('btn-batch-disable').addEventListener('click', batchDisable);
+    $('btn-batch-credits').addEventListener('click', batchSetCredit);
+
+    // 全选复选框
+    $('chk-all').addEventListener('change', () => {
+      const checked = $('chk-all').checked;
+      document.querySelectorAll('.row-chk').forEach(el => { el.checked = checked; });
+      updateRowHighlight();
+      updateBatchBar();
     });
 
+    // 快捷链接全选/取消
+    $('link-select-all').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.row-chk').forEach(el => { el.checked = true; });
+      updateRowHighlight();
+      updateBatchBar();
+    });
+    $('link-deselect-all').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.row-chk').forEach(el => { el.checked = false; });
+      updateRowHighlight();
+      updateBatchBar();
+    });
+
+    // 行内单条操作 + 行复选框
+    $('tbody').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (btn) {
+        const act = btn.getAttribute('data-act');
+        const key = btn.getAttribute('data-key');
+        if (act === 'copy')    copyKey(key);
+        if (act === 'disable') disableKey(key);
+        if (act === 'set')     setCredit(key);
+        return;
+      }
+      // 点击复选框或整行
+      const chk = e.target.closest('.row-chk');
+      if (chk) {
+        updateRowHighlight();
+        updateBatchBar();
+      }
+    });
+
+    /* ── 初始化 ── */
     (function init() {
       const secret = localStorage.getItem(LS_KEY);
       if (secret) $('secret').value = secret;

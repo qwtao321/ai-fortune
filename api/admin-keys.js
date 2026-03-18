@@ -88,6 +88,31 @@ module.exports = async function handler(req, res) {
         if (!result.length) return send(res, { code: 404, message: '密钥不存在' }, 404);
         return send(res, { code: 0, message: '已更新', data: { credits } });
       }
+      case 'batchDisable': {
+        const keys = Array.isArray(body.keys) ? body.keys : [];
+        if (!keys.length) return send(res, { code: 400, message: '缺少 keys 数组' }, 400);
+        const result = await sql`
+          UPDATE user_keys
+          SET credits = 0, updated_at = NOW()
+          WHERE key = ANY(${keys}::text[])
+          RETURNING key
+        `;
+        return send(res, { code: 0, message: `已禁用 ${result.length} 条`, data: { count: result.length } });
+      }
+      case 'batchSetCredit': {
+        const keys = Array.isArray(body.keys) ? body.keys : [];
+        if (!keys.length || body.credits === undefined) {
+          return send(res, { code: 400, message: '缺少 keys 数组或 credits 参数' }, 400);
+        }
+        const credits = Number(body.credits);
+        const result = await sql`
+          UPDATE user_keys
+          SET credits = ${credits}, updated_at = NOW()
+          WHERE key = ANY(${keys}::text[])
+          RETURNING key
+        `;
+        return send(res, { code: 0, message: `已更新 ${result.length} 条积分为 ${credits}`, data: { count: result.length, credits } });
+      }
       default:
         return send(res, { code: 400, message: `未知操作：${action}` }, 400);
     }
