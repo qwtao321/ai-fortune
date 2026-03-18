@@ -3,173 +3,416 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>密钥管理后台</title>
+  <title>密钥管理后台 · THE SOLVE</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+
     :root {
-      --bg: #0b0f17;
-      --card: rgba(255,255,255,0.05);
-      --border: rgba(255,255,255,0.14);
-      --text: #dce4f1;
-      --muted: #97a3b8;
-      --accent: #7b8fb8;
-      --danger: #d35f5f;
-      --ok: #67b37e;
+      --bg:        #060910;
+      --surface:   rgba(12,16,28,0.85);
+      --glass:     rgba(255,255,255,0.04);
+      --border:    rgba(120,140,200,0.18);
+      --border-hi: rgba(160,180,255,0.35);
+      --text:      #d8e4f8;
+      --muted:     #7a8aaa;
+      --purple:    #a78bfa;
+      --blue:      #60a5fa;
+      --gold:      #f5c97a;
+      --danger:    #e06b6b;
+      --ok:        #6ee7b7;
     }
-    * { box-sizing: border-box; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── 背景层 ── */
     body {
-      margin: 0;
       font-family: "PingFang SC","Microsoft YaHei",sans-serif;
-      background:
-        radial-gradient(ellipse at 10% 0%, rgba(126,156,224,.18), transparent 50%),
-        radial-gradient(ellipse at 90% 100%, rgba(154,129,212,.15), transparent 55%),
-        var(--bg);
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; }
+
+    /* 星场背景 */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 15%, rgba(167,139,250,.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 75% 28%, rgba(96,165,250,.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 45% 60%, rgba(245,201,122,.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 88% 72%, rgba(167,139,250,.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 12% 85%, rgba(96,165,250,.4) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 60% 10%, rgba(255,255,255,.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 33% 45%, rgba(255,255,255,.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 92% 40%, rgba(255,255,255,.25) 0%, transparent 100%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* 光晕层 */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 15% 0%, rgba(100,80,220,.14) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 60% at 85% 100%, rgba(80,120,240,.12) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(120,80,200,.06) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+      animation: pulseGlow 8s ease-in-out infinite alternate;
+    }
+    @keyframes pulseGlow {
+      0%   { opacity: .8; }
+      100% { opacity: 1.2; }
+    }
+
+    /* 网格纹理 */
+    .grid-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(120,140,200,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120,140,200,.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 1100px; margin: 0 auto;
+      padding: 48px 20px 64px;
+    }
+
+    /* ── 页头 ── */
+    .page-header { margin-bottom: 36px; }
+    .page-header .eyebrow {
+      font-family: 'Cinzel', serif;
+      font-size: 11px; letter-spacing: .35em;
+      color: var(--purple); text-transform: uppercase;
+      margin-bottom: 10px; opacity: .85;
+    }
+    .page-header h1 {
+      font-size: 32px; font-weight: 700;
+      letter-spacing: .05em; line-height: 1.2;
+      background: linear-gradient(135deg, #e2d9ff 0%, #a78bfa 40%, #60a5fa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .page-header .sub {
+      margin-top: 10px; font-size: 13px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .page-header .sub .key-tag {
+      font-family: Consolas, monospace; font-size: 12px;
+      padding: 2px 10px; border-radius: 6px;
+      background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.25);
+      color: var(--purple);
+    }
+
+    /* 顶部装饰线 */
+    .header-rule {
+      width: 100%; height: 1px; margin-bottom: 28px;
+      background: linear-gradient(90deg, transparent, rgba(167,139,250,.5), rgba(96,165,250,.4), transparent);
+    }
+
+    /* ── 卡片 ── */
     .card {
-      background: var(--card);
+      position: relative;
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 24px rgba(0,0,0,.22);
+      border-radius: 20px;
+      padding: 24px 26px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      overflow: hidden;
     }
-    h1 { margin: 0 0 10px; font-size: 26px; letter-spacing: .04em; }
-    .sub { color: var(--muted); margin-bottom: 16px; }
-    .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; }
+    /* 顶部高光线 */
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(200,210,255,.3), transparent);
+    }
+    /* 角落装饰 */
+    .card::after {
+      content: '';
+      position: absolute; top: -60px; right: -60px;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(100,80,200,.07), transparent 70%);
+      pointer-events: none;
+    }
+    .card + .card { margin-top: 16px; }
+
+    /* ── 卡片标题 ── */
+    .card-title {
+      font-size: 11px; font-weight: 600; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      display: inline-block; width: 3px; height: 14px; border-radius: 2px;
+      background: linear-gradient(180deg, var(--purple), var(--blue));
+    }
+
+    /* ── 表单 ── */
+    .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
     .field { grid-column: span 12; }
     .field.half { grid-column: span 6; }
     .field.third { grid-column: span 4; }
-    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+    label {
+      display: block; font-size: 11px; letter-spacing: .06em;
+      color: var(--muted); margin-bottom: 7px; text-transform: uppercase;
+    }
     input, textarea {
       width: 100%;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,.04);
+      background: rgba(255,255,255,.03);
       color: var(--text);
-      border-radius: 10px;
-      padding: 10px 12px;
+      border-radius: 12px;
+      padding: 11px 14px;
       outline: none;
+      font-size: 13px;
+      transition: border-color .2s, box-shadow .2s;
     }
     textarea { min-height: 70px; resize: vertical; }
-    input:focus, textarea:focus { border-color: rgba(189,205,237,.7); }
-    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
-    button {
-      border: 1px solid rgba(194,210,240,.35);
-      background: linear-gradient(135deg, #6f86b0, #576f95);
-      color: #eef4ff;
-      border-radius: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 600;
-      white-space: nowrap;
+    input:focus, textarea:focus {
+      border-color: rgba(167,139,250,.5);
+      box-shadow: 0 0 0 3px rgba(167,139,250,.08);
     }
-    button.secondary { background: rgba(255,255,255,.06); color: var(--text); }
-    button.danger { background: rgba(211,95,95,.2); border-color: rgba(211,95,95,.45); color: #ffd6d6; }
-    button.active { background: rgba(111,134,176,.3); border-color: rgba(111,134,176,.7); color: #c8d9f5; }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    .status { font-size: 13px; margin-top: 8px; color: var(--muted); white-space: pre-wrap; }
-    .status.ok  { color: #9ce1b0; }
-    .status.err { color: #ffb7b7; }
+
+    /* ── 按钮 ── */
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    button {
+      position: relative; overflow: hidden;
+      border: 1px solid rgba(167,139,250,.35);
+      background: linear-gradient(135deg, rgba(100,80,180,.5) 0%, rgba(70,90,160,.4) 100%);
+      color: #d4d8ff;
+      border-radius: 10px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-weight: 600; font-size: 13px;
+      letter-spacing: .03em;
+      white-space: nowrap;
+      transition: border-color .2s, box-shadow .2s, transform .15s;
+    }
+    button::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.08), transparent);
+      opacity: 0; transition: opacity .2s;
+    }
+    button:hover { border-color: rgba(167,139,250,.65); box-shadow: 0 0 18px rgba(120,90,220,.25); transform: translateY(-1px); }
+    button:hover::after { opacity: 1; }
+    button:active { transform: translateY(0); }
+
+    button.secondary {
+      background: rgba(255,255,255,.05);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    button.secondary:hover { border-color: var(--border-hi); box-shadow: 0 0 12px rgba(160,180,255,.1); }
+
+    button.danger {
+      background: rgba(180,70,70,.2);
+      border-color: rgba(220,100,100,.35);
+      color: #ffcfcf;
+    }
+    button.danger:hover { box-shadow: 0 0 18px rgba(200,70,70,.2); border-color: rgba(220,100,100,.6); }
+
+    button.active {
+      background: linear-gradient(135deg, rgba(100,80,180,.7), rgba(60,100,200,.6));
+      border-color: rgba(167,139,250,.7);
+      color: #e2d9ff;
+      box-shadow: 0 0 14px rgba(120,90,220,.3);
+    }
+    button:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+    /* ── 状态栏 ── */
+    .status {
+      font-size: 12px; margin-top: 12px; color: var(--muted);
+      white-space: pre-wrap; padding: 8px 12px; border-radius: 8px;
+      background: rgba(255,255,255,.02); border: 1px solid transparent;
+      line-height: 1.6;
+    }
+    .status.ok  { color: var(--ok);    border-color: rgba(110,231,183,.15); background: rgba(110,231,183,.05); }
+    .status.err { color: #ffb7b7; border-color: rgba(224,107,107,.18); background: rgba(224,107,107,.06); }
 
     /* ── 批量工具栏 ── */
     #batch-bar {
-      display: none;
-      align-items: center;
-      gap: 10px;
-      margin: 12px 0 0;
-      padding: 10px 14px;
-      background: rgba(111,134,176,.12);
-      border: 1px solid rgba(111,134,176,.3);
-      border-radius: 10px;
-      flex-wrap: wrap;
+      display: none; align-items: center; gap: 10px;
+      margin: 14px 0 0; padding: 10px 16px;
+      background: linear-gradient(135deg, rgba(90,70,160,.18), rgba(60,80,160,.12));
+      border: 1px solid rgba(130,110,220,.3);
+      border-radius: 12px; flex-wrap: wrap;
     }
     #batch-bar.visible { display: flex; }
-    #batch-count { font-size: 13px; color: #a8bfdf; margin-right: 4px; white-space: nowrap; }
-    #batch-bar button { padding: 7px 12px; font-size: 13px; }
+    #batch-count {
+      font-size: 12px; font-weight: 600; letter-spacing: .05em;
+      color: var(--purple); background: rgba(167,139,250,.1);
+      padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(167,139,250,.25);
+      white-space: nowrap;
+    }
+    #batch-bar button { padding: 7px 14px; font-size: 12px; }
 
     /* ── 表格 ── */
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
-    th, td {
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      text-align: left;
-      padding: 10px 6px;
-      vertical-align: middle;
+    .table-wrap { overflow-x: auto; margin-top: 14px; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      min-width: 600px;
     }
-    th { color: var(--muted); font-weight: 600; }
-    th.cb-col, td.cb-col { width: 36px; text-align: center; padding: 10px 4px; }
+    thead tr {
+      border-bottom: 1px solid rgba(120,140,200,.2);
+    }
+    th {
+      color: var(--muted); font-weight: 600; font-size: 11px;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 10px 8px 12px;
+    }
+    td {
+      padding: 12px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      vertical-align: middle;
+      transition: background .15s;
+    }
+    tbody tr:hover td { background: rgba(140,160,255,.04); }
+    th.cb-col, td.cb-col { width: 36px; text-align: center; padding-left: 4px; padding-right: 4px; }
 
     input[type="checkbox"] {
-      width: 16px; height: 16px;
-      accent-color: #7b8fb8;
-      cursor: pointer; padding: 0; border-radius: 4px;
+      width: 15px; height: 15px;
+      accent-color: var(--purple);
+      cursor: pointer; padding: 0; border-radius: 3px;
     }
 
-    .key { font-family: Consolas, monospace; }
+    .key {
+      font-family: Consolas, monospace; font-size: 12px;
+      color: rgba(200,215,255,.75);
+      letter-spacing: .02em;
+    }
     .actions { display: flex; gap: 6px; }
-    .muted { color: var(--muted); font-size: 12px; }
+    .actions button { padding: 5px 10px; font-size: 11px; border-radius: 7px; }
+
+    /* ── 积分徽章 ── */
     .badge {
-      display: inline-block; padding: 3px 10px; border-radius: 20px;
-      font-size: 13px; font-weight: 700; min-width: 36px; text-align: center;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 11px; border-radius: 20px;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: .03em;
     }
-    .badge-ok   { background: rgba(103,179,126,.18); color: #7ee8a2; border: 1px solid rgba(103,179,126,.4); }
-    .badge-warn { background: rgba(220,160,60,.18);  color: #f5c97a; border: 1px solid rgba(220,160,60,.4); }
-    .badge-zero { background: rgba(211,95,95,.18);   color: #ffb7b7; border: 1px solid rgba(211,95,95,.4); }
+    .badge-ok   {
+      background: rgba(110,231,183,.12); color: #6ee7b7;
+      border: 1px solid rgba(110,231,183,.3);
+      box-shadow: 0 0 8px rgba(110,231,183,.1);
+    }
+    .badge-warn {
+      background: rgba(245,201,122,.12); color: var(--gold);
+      border: 1px solid rgba(245,201,122,.3);
+    }
+    .badge-zero {
+      background: rgba(224,107,107,.12); color: #ffb7b7;
+      border: 1px solid rgba(224,107,107,.3);
+    }
 
-    /* 行选中高亮 */
-    tr.selected td { background: rgba(111,134,176,.1); }
+    /* 行选中 */
+    tr.selected td { background: rgba(130,110,220,.08) !important; }
 
-    /* ── 分组表头行 ── */
+    /* ── 分组 ── */
     tr.group-header td {
-      background: rgba(111,134,176,.1);
-      border-top: 1px solid rgba(111,134,176,.25);
-      border-bottom: 1px solid rgba(111,134,176,.18);
-      padding: 8px 10px;
-      cursor: pointer;
-      user-select: none;
+      padding: 0;
+      border-bottom: none;
+      border-top: 1px solid rgba(120,140,200,.12);
     }
-    tr.group-header td:hover { background: rgba(111,134,176,.18); }
-    .group-label {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 600; color: #a8bfdf;
+    .group-header-inner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px 10px 6px;
+      cursor: pointer; user-select: none;
+      background: linear-gradient(90deg, rgba(100,80,180,.1), transparent 80%);
+      border-radius: 6px;
+      transition: background .15s;
     }
+    .group-header-inner:hover { background: linear-gradient(90deg, rgba(100,80,180,.18), transparent 80%); }
+
     .group-arrow {
-      display: inline-block; font-size: 10px; color: var(--muted);
-      transition: transform .2s; width: 12px;
+      font-size: 9px; color: var(--purple); width: 12px; text-align: center;
+      transition: transform .2s;
     }
     .group-arrow.collapsed { transform: rotate(-90deg); }
+
+    .group-name {
+      font-size: 12px; font-weight: 700; letter-spacing: .08em;
+      color: rgba(200,210,255,.85);
+    }
     .group-count {
-      display: inline-block; padding: 1px 8px; border-radius: 12px;
-      font-size: 11px; font-weight: 600; background: rgba(111,134,176,.2);
-      color: #a8bfdf; border: 1px solid rgba(111,134,176,.3);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 9px; border-radius: 12px;
+      background: rgba(167,139,250,.12); color: var(--purple);
+      border: 1px solid rgba(167,139,250,.25);
+    }
+    .group-divider {
+      flex: 1; height: 1px;
+      background: linear-gradient(90deg, rgba(120,140,200,.2), transparent);
     }
     .group-stats {
-      margin-left: auto; font-size: 11px; color: var(--muted);
-      display: flex; gap: 10px;
+      display: flex; gap: 12px; font-size: 11px; margin-left: 4px;
     }
     .group-stats span { white-space: nowrap; }
-    /* 分组内数据行缩进 */
+
     tr.group-row td:nth-child(2) { padding-left: 18px; }
-    /* 分组行隐藏 */
     tr.group-row.hidden { display: none; }
+
+    /* ── 工具栏顶行 ── */
+    .list-toolbar {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .toolbar-right {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .select-links {
+      font-size: 12px; color: var(--muted);
+    }
+    .select-links a {
+      color: rgba(167,139,250,.8); text-decoration: none;
+      transition: color .15s;
+    }
+    .select-links a:hover { color: var(--purple); }
+
+    /* ── 分割线装饰 ── */
+    .ornament {
+      text-align: center; color: rgba(167,139,250,.2);
+      font-size: 14px; letter-spacing: .5em; margin: 4px 0;
+      user-select: none;
+    }
 
     @media (max-width: 780px) {
       .field.half, .field.third { grid-column: span 12; }
       .group-stats { display: none; }
+      .page-header h1 { font-size: 26px; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>密钥管理后台</h1>
-    <div class="sub">同域接口：<span class="key">/api/admin-keys</span>，请保管好管理员口令。</div>
+  <div class="grid-bg"></div>
 
+  <div class="wrap">
+
+    <!-- 页头 -->
+    <div class="page-header">
+      <div class="eyebrow">The Solve · Fortune System</div>
+      <h1>密钥管理后台</h1>
+      <div class="sub">
+        <span>管理员接口</span>
+        <span class="key-tag">/api/admin-keys</span>
+        <span>· 请妥善保管管理员口令</span>
+      </div>
+    </div>
+    <div class="header-rule"></div>
+
+    <!-- 操作面板 -->
     <div class="card">
+      <div class="card-title">密钥生成 &amp; 认证</div>
       <div class="row">
         <div class="field">
           <label for="secret">管理员口令（ADMIN_SECRET）</label>
-          <input id="secret" type="password" placeholder="请输入管理员口令" />
+          <input id="secret" type="password" placeholder="输入管理员口令以解锁操作" />
         </div>
         <div class="field third">
           <label for="count">生成数量</label>
@@ -180,65 +423,69 @@
           <input id="credits" type="number" min="1" max="999" value="20" />
         </div>
         <div class="field">
-          <label for="note">备注</label>
-          <textarea id="note" placeholder="例如：首批渠道卡"></textarea>
+          <label for="note">备注标签</label>
+          <textarea id="note" placeholder="例如：首批渠道卡 · 内测邀请码 · VIP专属"></textarea>
         </div>
       </div>
-      <div class="btns" style="margin-top:10px;">
-        <button id="btn-generate">生成密钥</button>
-        <button id="btn-list" class="secondary">刷新列表</button>
-        <button id="btn-save" class="secondary">保存口令到本地</button>
-        <button id="btn-clear" class="danger">清除本地口令</button>
+      <div class="btns">
+        <button id="btn-generate">⊕ 生成密钥</button>
+        <button id="btn-list" class="secondary">↺ 刷新列表</button>
+        <button id="btn-save" class="secondary">⊙ 保存口令</button>
+        <button id="btn-clear" class="danger">× 清除口令</button>
       </div>
       <div id="status" class="status">准备就绪</div>
     </div>
 
-    <div class="card" style="margin-top:14px;">
-      <!-- 工具栏 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <div class="muted">密钥列表（最新在前）</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button id="btn-group" class="secondary" style="padding:6px 12px;font-size:12px;">按备注分组</button>
-          <div style="font-size:12px;color:var(--muted);">
-            勾选行后可批量操作 &nbsp;·&nbsp;
-            <a href="#" id="link-select-all" style="color:#a8bfdf;text-decoration:none;">全选</a>
-            &nbsp;/&nbsp;
-            <a href="#" id="link-deselect-all" style="color:#a8bfdf;text-decoration:none;">取消全选</a>
+    <!-- 密钥列表 -->
+    <div class="card" style="margin-top:18px;">
+      <div class="list-toolbar">
+        <div class="card-title" style="margin-bottom:0;">密钥列表 <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:.03em;font-size:11px;">（全量 · 最新在前）</span></div>
+        <div class="toolbar-right">
+          <button id="btn-group" class="secondary" style="padding:6px 14px;font-size:12px;">⊞ 按备注分组</button>
+          <div class="select-links">
+            <a href="#" id="link-select-all">全选</a>
+            &nbsp;·&nbsp;
+            <a href="#" id="link-deselect-all">取消</a>
           </div>
         </div>
       </div>
 
-      <!-- 批量操作工具栏 -->
+      <!-- 批量操作栏 -->
       <div id="batch-bar">
         <span id="batch-count">已选 0 条</span>
-        <button id="btn-batch-copy" class="secondary">批量复制</button>
-        <button id="btn-batch-credits" class="secondary">批量改积分</button>
-        <button id="btn-batch-disable" class="danger">批量禁用</button>
+        <button id="btn-batch-copy" class="secondary">⊕ 批量复制</button>
+        <button id="btn-batch-credits" class="secondary">✦ 批量改积分</button>
+        <button id="btn-batch-disable" class="danger">⊘ 批量禁用</button>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th class="cb-col"><input type="checkbox" id="chk-all" title="全选/取消" /></th>
-            <th>密钥</th>
-            <th>剩余积分</th>
-            <th>备注</th>
-            <th>创建时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="cb-col"><input type="checkbox" id="chk-all" title="全选/取消" /></th>
+              <th>密钥</th>
+              <th>剩余积分</th>
+              <th>备注</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
+
+    <div class="ornament" style="margin-top:32px;">· · ✦ · ·</div>
+
+  </div><!-- /.wrap -->
 
   <script>
     const API    = '/api/admin-keys';
     const LS_KEY = 'ft_admin_secret';
     const $      = (id) => document.getElementById(id);
 
-    let allRows   = [];      // 原始数据
-    let groupMode = false;   // 是否分组模式
+    let allRows   = [];
+    let groupMode = false;
 
     /* ── 状态 ── */
     function setStatus(text, type) {
@@ -273,42 +520,41 @@
     }
 
     function creditsBadge(credits) {
-      if (credits <= 0) return `<span class="badge badge-zero">0 已耗尽</span>`;
-      if (credits <= 5) return `<span class="badge badge-warn">${credits} 偏少</span>`;
-      return `<span class="badge badge-ok">${credits}</span>`;
+      if (credits <= 0) return `<span class="badge badge-zero">⊘ 已耗尽</span>`;
+      if (credits <= 5) return `<span class="badge badge-warn">⚡ ${credits}</span>`;
+      return `<span class="badge badge-ok">✦ ${credits}</span>`;
     }
 
-    /* ── 单行 HTML ── */
+    /* ── 单行 ── */
     function rowHtml(item, extraClass = '') {
       const key     = item.key || '-';
       const credits = Number(item.credits ?? 0);
-      const note    = item.note || '';
+      const note    = item.note || '<span style="color:rgba(150,160,180,.4);font-size:11px;">—</span>';
       const created = formatDate(item.created_at);
       return `<tr data-key="${key}" class="${extraClass}">
         <td class="cb-col"><input type="checkbox" class="row-chk" data-key="${key}" /></td>
-        <td class="key">${key}</td>
+        <td class="key">${item.key || '-'}</td>
         <td>${creditsBadge(credits)}</td>
-        <td>${note}</td>
-        <td>${created}</td>
+        <td style="color:var(--muted);font-size:12px;">${note}</td>
+        <td style="color:var(--muted);font-size:12px;">${created}</td>
         <td>
           <div class="actions">
-            <button class="secondary" data-act="copy"    data-key="${key}">复制</button>
-            <button class="secondary" data-act="set"     data-key="${key}">改积分</button>
-            <button class="danger"    data-act="disable" data-key="${key}">禁用</button>
+            <button class="secondary" data-act="copy"    data-key="${item.key}">复制</button>
+            <button class="secondary" data-act="set"     data-key="${item.key}">积分</button>
+            <button class="danger"    data-act="disable" data-key="${item.key}">禁用</button>
           </div>
         </td>
       </tr>`;
     }
 
-    /* ── 分组渲染 ── */
+    /* ── 分组 ── */
     function groupBy(rows) {
       const map = new Map();
       rows.forEach(item => {
-        const key = (item.note || '').trim() || '（无备注）';
-        if (!map.has(key)) map.set(key, []);
-        map.get(key).push(item);
+        const k = (item.note || '').trim() || '（无备注）';
+        if (!map.has(k)) map.set(k, []);
+        map.get(k).push(item);
       });
-      // 排序：有备注的按字母，无备注放最后
       return [...map.entries()].sort(([a], [b]) => {
         if (a === '（无备注）') return 1;
         if (b === '（无备注）') return -1;
@@ -320,47 +566,40 @@
       const groups = groupBy(rows);
       let html = '';
       groups.forEach(([label, items], idx) => {
-        const groupId   = 'grp-' + idx;
+        const gid       = 'grp-' + idx;
         const total     = items.length;
         const available = items.filter(i => Number(i.credits) > 0).length;
         const exhausted = total - available;
-        html += `<tr class="group-header" data-group="${groupId}">
+        html += `<tr class="group-header" data-group="${gid}">
           <td colspan="6">
-            <div class="group-label">
-              <span class="group-arrow" id="arrow-${groupId}">▼</span>
-              <span>${label}</span>
+            <div class="group-header-inner">
+              <span class="group-arrow" id="arrow-${gid}">▼</span>
+              <span class="group-name">${label}</span>
               <span class="group-count">${total} 张</span>
+              <div class="group-divider"></div>
               <div class="group-stats">
-                <span style="color:#7ee8a2;">可用 ${available}</span>
+                <span style="color:var(--ok);">可用 ${available}</span>
                 ${exhausted > 0 ? `<span style="color:#ffb7b7;">耗尽 ${exhausted}</span>` : ''}
               </div>
             </div>
           </td>
         </tr>`;
-        items.forEach(item => {
-          html += rowHtml(item, `group-row grp-${groupId}`);
-        });
+        items.forEach(item => { html += rowHtml(item, `group-row grp-${gid}`); });
       });
-      $('tbody').innerHTML = html || '<tr><td colspan="6" class="muted">暂无数据</td></tr>';
+      $('tbody').innerHTML = html || `<tr><td colspan="6" style="color:var(--muted);padding:24px;text-align:center;font-size:13px;">暂无数据</td></tr>`;
     }
 
-    /* ── 平铺渲染 ── */
     function renderFlat(rows) {
       $('tbody').innerHTML = rows.map(item => rowHtml(item)).join('') ||
-        '<tr><td colspan="6" class="muted">暂无数据</td></tr>';
+        `<tr><td colspan="6" style="color:var(--muted);padding:24px;text-align:center;font-size:13px;">暂无数据</td></tr>`;
     }
 
-    /* ── 统一渲染入口 ── */
     function renderTable(rows) {
-      if (groupMode) {
-        renderGrouped(rows);
-      } else {
-        renderFlat(rows);
-      }
+      groupMode ? renderGrouped(rows) : renderFlat(rows);
       updateBatchBar();
     }
 
-    /* ── 选中管理 ── */
+    /* ── 选中 ── */
     function getCheckedKeys() {
       return [...document.querySelectorAll('.row-chk:checked')].map(el => el.dataset.key);
     }
@@ -369,8 +608,8 @@
       const keys = getCheckedKeys();
       $('batch-bar').classList.toggle('visible', keys.length > 0);
       if (keys.length) $('batch-count').textContent = `已选 ${keys.length} 条`;
-      const allChks = document.querySelectorAll('.row-chk');
-      const visible = [...allChks].filter(el => !el.closest('tr').classList.contains('hidden'));
+      const allChks = [...document.querySelectorAll('.row-chk')];
+      const visible = allChks.filter(el => !el.closest('tr').classList.contains('hidden'));
       $('chk-all').checked       = visible.length > 0 && keys.length === allChks.length;
       $('chk-all').indeterminate = keys.length > 0 && keys.length < allChks.length;
     }
@@ -382,26 +621,24 @@
       });
     }
 
-    /* ── 分组折叠 ── */
-    function toggleGroup(groupId) {
-      const rows  = document.querySelectorAll(`tr.grp-${groupId}`);
-      const arrow = document.getElementById(`arrow-${groupId}`);
+    /* ── 折叠 ── */
+    function toggleGroup(gid) {
+      const rows  = document.querySelectorAll(`tr.grp-${gid}`);
+      const arrow = document.getElementById(`arrow-${gid}`);
       const collapsed = arrow.classList.toggle('collapsed');
       rows.forEach(tr => tr.classList.toggle('hidden', collapsed));
     }
 
-    /* ── 列表刷新 ── */
+    /* ── 刷新 ── */
     async function refreshList() {
       try {
         const secret = ensureSecret();
-        setStatus('读取列表中...');
+        setStatus('读取列表中…');
         const res = await postAdmin({ secret, action: 'list' });
         allRows = Array.isArray(res.data) ? res.data : [];
         renderTable(allRows);
-        setStatus(`列表已更新，共 ${allRows.length} 条（全量）`, 'ok');
-      } catch (e) {
-        setStatus('读取失败：' + e.message, 'err');
-      }
+        setStatus(`列表已更新 · 共 ${allRows.length} 条（全量）`, 'ok');
+      } catch (e) { setStatus('读取失败：' + e.message, 'err'); }
     }
 
     /* ── 生成 ── */
@@ -411,37 +648,31 @@
         const count   = Math.max(1, Math.min(100, Number($('count').value || 1)));
         const credits = Math.max(1, Math.min(999, Number($('credits').value || 10)));
         const note    = $('note').value.trim();
-        setStatus('生成中...');
+        setStatus('生成中…');
         const res  = await postAdmin({ secret, action: 'generate', count, credits, note });
         const keys = res.data?.keys || [];
-        setStatus(`生成成功：${keys.length} 张\n${keys.join('\n')}`, 'ok');
+        setStatus(`生成成功 · ${keys.length} 张\n${keys.join('\n')}`, 'ok');
         await refreshList();
-      } catch (e) {
-        setStatus('生成失败：' + e.message, 'err');
-      }
+      } catch (e) { setStatus('生成失败：' + e.message, 'err'); }
     }
 
-    /* ── 单条操作 ── */
+    /* ── 单条 ── */
     async function disableKey(key) {
       try {
         const secret = ensureSecret();
         if (!confirm(`确定禁用密钥 ${key} ?`)) return;
-        setStatus(`禁用中：${key}...`);
+        setStatus(`禁用中：${key}…`);
         await postAdmin({ secret, action: 'disable', key });
         setStatus(`已禁用：${key}`, 'ok');
         await refreshList();
-      } catch (e) {
-        setStatus('禁用失败：' + e.message, 'err');
-      }
+      } catch (e) { setStatus('禁用失败：' + e.message, 'err'); }
     }
 
     async function copyKey(key) {
       try {
         await navigator.clipboard.writeText(key);
-        setStatus(`已复制：${key}`, 'ok');
-      } catch (e) {
-        setStatus('复制失败，请手动选中密钥文字', 'err');
-      }
+        setStatus(`已复制到剪贴板：${key}`, 'ok');
+      } catch (e) { setStatus('复制失败，请手动选中文字', 'err'); }
     }
 
     async function setCredit(key) {
@@ -450,26 +681,22 @@
         const val = prompt(`为 ${key} 设置新积分：`, '10');
         if (val === null) return;
         const credits = Number(val);
-        if (!Number.isFinite(credits) || credits < 0) throw new Error('积分必须是大于等于 0 的数字');
-        setStatus(`更新积分中：${key} -> ${credits}...`);
+        if (!Number.isFinite(credits) || credits < 0) throw new Error('积分必须 ≥ 0');
+        setStatus(`更新积分中…`);
         await postAdmin({ secret, action: 'setCredit', key, credits });
-        setStatus(`已更新：${key} -> ${credits}`, 'ok');
+        setStatus(`已更新：${key} → ${credits}`, 'ok');
         await refreshList();
-      } catch (e) {
-        setStatus('更新失败：' + e.message, 'err');
-      }
+      } catch (e) { setStatus('更新失败：' + e.message, 'err'); }
     }
 
-    /* ── 批量操作 ── */
+    /* ── 批量 ── */
     async function batchCopy() {
       const keys = getCheckedKeys();
       if (!keys.length) return;
       try {
         await navigator.clipboard.writeText(keys.join('\n'));
         setStatus(`已复制 ${keys.length} 个密钥到剪贴板`, 'ok');
-      } catch (e) {
-        setStatus('复制失败：' + e.message, 'err');
-      }
+      } catch (e) { setStatus('复制失败：' + e.message, 'err'); }
     }
 
     async function batchDisable() {
@@ -478,13 +705,11 @@
       try {
         const secret = ensureSecret();
         if (!confirm(`确定批量禁用选中的 ${keys.length} 个密钥（积分清零）？`)) return;
-        setStatus(`批量禁用中（${keys.length} 条）...`);
+        setStatus(`批量禁用中（${keys.length} 条）…`);
         const res = await postAdmin({ secret, action: 'batchDisable', keys });
         setStatus(res.message || `已禁用 ${keys.length} 条`, 'ok');
         await refreshList();
-      } catch (e) {
-        setStatus('批量禁用失败：' + e.message, 'err');
-      }
+      } catch (e) { setStatus('批量禁用失败：' + e.message, 'err'); }
     }
 
     async function batchSetCredit() {
@@ -495,22 +720,20 @@
         const val = prompt(`为选中的 ${keys.length} 个密钥统一设置积分：`, '10');
         if (val === null) return;
         const credits = Number(val);
-        if (!Number.isFinite(credits) || credits < 0) throw new Error('积分必须是大于等于 0 的数字');
-        setStatus(`批量更新积分中（${keys.length} 条 -> ${credits}）...`);
+        if (!Number.isFinite(credits) || credits < 0) throw new Error('积分必须 ≥ 0');
+        setStatus(`批量更新中（${keys.length} 条 → ${credits}）…`);
         const res = await postAdmin({ secret, action: 'batchSetCredit', keys, credits });
         setStatus(res.message || `已更新 ${keys.length} 条`, 'ok');
         await refreshList();
-      } catch (e) {
-        setStatus('批量改积分失败：' + e.message, 'err');
-      }
+      } catch (e) { setStatus('批量改积分失败：' + e.message, 'err'); }
     }
 
-    /* ── 分组模式切换 ── */
+    /* ── 分组切换 ── */
     function toggleGroupMode() {
       groupMode = !groupMode;
       const btn = $('btn-group');
       btn.classList.toggle('active', groupMode);
-      btn.textContent = groupMode ? '取消分组' : '按备注分组';
+      btn.textContent = groupMode ? '⊟ 取消分组' : '⊞ 按备注分组';
       renderTable(allRows);
     }
 
@@ -518,9 +741,9 @@
     $('btn-generate').addEventListener('click', generateKeys);
     $('btn-list').addEventListener('click', refreshList);
     $('btn-save').addEventListener('click', () => {
-      const secret = $('secret').value.trim();
-      if (!secret) return setStatus('口令为空，无法保存', 'err');
-      localStorage.setItem(LS_KEY, secret);
+      const s = $('secret').value.trim();
+      if (!s) return setStatus('口令为空，无法保存', 'err');
+      localStorage.setItem(LS_KEY, s);
       setStatus('口令已保存到本地浏览器', 'ok');
     });
     $('btn-clear').addEventListener('click', () => {
@@ -533,39 +756,30 @@
     $('btn-batch-disable').addEventListener('click', batchDisable);
     $('btn-batch-credits').addEventListener('click', batchSetCredit);
 
-    // 全选复选框
     $('chk-all').addEventListener('change', () => {
       const checked = $('chk-all').checked;
       document.querySelectorAll('.row-chk').forEach(el => {
         if (!el.closest('tr').classList.contains('hidden')) el.checked = checked;
       });
-      updateRowHighlight();
-      updateBatchBar();
+      updateRowHighlight(); updateBatchBar();
     });
 
-    // 全选 / 取消 快捷链接
-    $('link-select-all').addEventListener('click', (e) => {
+    $('link-select-all').addEventListener('click', e => {
       e.preventDefault();
       document.querySelectorAll('.row-chk').forEach(el => {
         if (!el.closest('tr').classList.contains('hidden')) el.checked = true;
       });
       updateRowHighlight(); updateBatchBar();
     });
-    $('link-deselect-all').addEventListener('click', (e) => {
+    $('link-deselect-all').addEventListener('click', e => {
       e.preventDefault();
       document.querySelectorAll('.row-chk').forEach(el => { el.checked = false; });
       updateRowHighlight(); updateBatchBar();
     });
 
-    // tbody 事件委托
-    $('tbody').addEventListener('click', (e) => {
-      // 分组折叠
+    $('tbody').addEventListener('click', e => {
       const groupTr = e.target.closest('tr.group-header');
-      if (groupTr) {
-        toggleGroup(groupTr.dataset.group);
-        return;
-      }
-      // 单条操作按钮
+      if (groupTr) { toggleGroup(groupTr.dataset.group); return; }
       const btn = e.target.closest('button[data-act]');
       if (btn) {
         const act = btn.getAttribute('data-act');
@@ -575,17 +789,15 @@
         if (act === 'set')     setCredit(key);
         return;
       }
-      // 行复选框
       if (e.target.classList.contains('row-chk')) {
-        updateRowHighlight();
-        updateBatchBar();
+        updateRowHighlight(); updateBatchBar();
       }
     });
 
     /* ── 初始化 ── */
     (function init() {
-      const secret = localStorage.getItem(LS_KEY);
-      if (secret) $('secret').value = secret;
+      const s = localStorage.getItem(LS_KEY);
+      if (s) $('secret').value = s;
       setStatus('准备就绪');
     })();
   </script>
